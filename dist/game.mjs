@@ -95,7 +95,7 @@ paintGround();
 const enemySheet = $('enemy-preview'), enemyCtx = enemySheet.getContext('2d');
 enemyCtx.fillStyle = '#171f18'; enemyCtx.fillRect(0, 0, 800, 190);
 for (const [i, type] of ['walker', 'runner', 'brute', 'boss'].entries()) {
-  enemyCtx.save(); enemyCtx.translate(100 + i * 200, 92); enemyCtx.scale(2.2, 2.2);
+  enemyCtx.save(); enemyCtx.translate(100 + i * 200, 92); enemyCtx.scale(type === 'boss' ? 1.65 : 2.2, type === 'boss' ? 1.65 : 2.2);
   drawZombie(enemyCtx, { x: 0, y: 0, angle: -.8, type, phase: i * 1.4, stage: type === 'boss' ? 2 : 1 }); enemyCtx.restore();
 }
 function drawBody(e, isPlayer = false) {
