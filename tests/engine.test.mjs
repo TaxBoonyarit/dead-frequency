@@ -75,3 +75,42 @@ test('difficulty changes enemy durability and contact damage', () => {
   easy.reset('recruit'); hard.reset('nightmare'); easy.start(); hard.start(); easy.spawn(); hard.spawn();
   assert.ok(hard.enemies[0].hp > easy.enemies[0].hp); assert.ok(hard.enemies[0].speed > easy.enemies[0].speed);
 });
+
+test('point-blank shots damage overlapping enemies in every direction', () => {
+  for (const angle of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) for (const distance of [0, 5, 20]) {
+    const g = running(); g.player.angle = angle;
+    g.enemies = [enemy(g.player.x + Math.cos(angle) * distance, g.player.y + Math.sin(angle) * distance)];
+    g.shoot(); g.update(1 / 60);
+    assert.equal(g.enemies[0].hp, 31, `Missed at distance ${distance}, angle ${angle}`);
+    assert.equal(g.gun.ammo, 17);
+  }
+});
+
+test('a close shot hits only the first enemy along its trajectory', () => {
+  const g = running(); g.player.angle = 0;
+  g.enemies = [enemy(645, 410), enemy(680, 410)]; g.shoot(); tick(g, .3);
+  assert.equal(g.enemies[0].hp, 31); assert.equal(g.enemies[1].hp, 65);
+});
+
+test('walkers and brutes reach targets around corners without clipping obstacles', () => {
+  const targets = [[640, 410], [400, 200], [350, 300], [880, 290], [600, 180], [600, 550]];
+  const starts = [[22, 200], [22, 600], [1258, 200], [1258, 600], [200, 22], [1100, 22], [200, 778], [1100, 778]];
+  for (const radius of [14, 21]) for (const [px, py] of targets) for (const [x, y] of starts) {
+    const g = running(); g.player.x = px; g.player.y = py;
+    const e = { ...enemy(x, y), r: radius, speed: 65, type: radius === 21 ? 'brute' : 'walker' };
+    g.enemies = [e];
+    const context = `radius=${radius} start=${x},${y} target=${px},${py}`;
+    for (let i = 0; i < 3600 && Math.hypot(e.x - px, e.y - py) >= radius + 15; i++) {
+      g.player.invulnerable = 100; g.update(1 / 60);
+      assert.equal(blocked(e.x, e.y, e.r), false, `Clipped obstacle: ${context}`);
+    }
+    assert.ok(Math.hypot(e.x - px, e.y - py) < radius + 15, `Stuck at ${e.x},${e.y}: ${context}`);
+  }
+});
+
+test('brutes can attack a player standing closer to a wall than their radius', () => {
+  const g = running(); g.player.x = 355; g.player.y = 200;
+  const e = { ...enemy(400, 400), r: 21, speed: 65, type: 'brute' }; g.enemies = [e];
+  for (let i = 0; i < 1200 && g.player.hp === 100; i++) g.update(1 / 60);
+  assert.ok(g.player.hp < 100); assert.equal(blocked(e.x, e.y, e.r), false);
+});

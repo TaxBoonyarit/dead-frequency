@@ -26,10 +26,48 @@ function move(body, dx, dy, r) {
   if (!blocked(body.x + dx, body.y, r)) body.x += dx;
   if (!blocked(body.x, body.y + dy, r)) body.y += dy;
 }
-function clearLine(x1, y1, x2, y2) {
-  const n = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 16);
-  for (let i = 1; i <= n; i++) if (blocked(x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n, 3)) return false;
+function clearLine(x1, y1, x2, y2, radius = 3) {
+  if (blocked(x1, y1, radius) || blocked(x2, y2, radius)) return false;
+  // Sweep the body's full bounds along the segment, including obstacle corners.
+  for (const o of OBSTACLES) {
+    let enter = 0, leave = 1;
+    for (const [start, delta, low, high] of [
+      [x1, x2 - x1, o.x - radius, o.x + o.w + radius],
+      [y1, y2 - y1, o.y - radius, o.y + o.h + radius],
+    ]) {
+      if (Math.abs(delta) < 1e-9) { if (start <= low || start >= high) { enter = Infinity; break; } }
+      else {
+        const a = (low - start) / delta, b = (high - start) / delta;
+        enter = Math.max(enter, Math.min(a, b)); leave = Math.min(leave, Math.max(a, b));
+      }
+    }
+    if (enter < leave) return false;
+  }
   return true;
+}
+const navigationGraphs = new Map();
+function navigationGraph(radius) {
+  if (navigationGraphs.has(radius)) return navigationGraphs.get(radius);
+  const padding = radius + 1;
+  const nodes = OBSTACLES.flatMap(o => [
+    { x: o.x - padding, y: o.y - padding }, { x: o.x + o.w + padding, y: o.y - padding },
+    { x: o.x - padding, y: o.y + o.h + padding }, { x: o.x + o.w + padding, y: o.y + o.h + padding },
+  ]).filter(n => !blocked(n.x, n.y, radius));
+  const edges = nodes.map(() => []);
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+    const a = nodes[i], b = nodes[j];
+    if (clearLine(a.x, a.y, b.x, b.y, radius)) {
+      const cost = Math.hypot(a.x - b.x, a.y - b.y);
+      edges[i].push({ index: j, cost }); edges[j].push({ index: i, cost });
+    }
+  }
+  const graph = { nodes, edges }; navigationGraphs.set(radius, graph); return graph;
+}
+function approachPoint(from, player, radius) {
+  const dx = from.x - player.x, dy = from.y - player.y, distance = Math.hypot(dx, dy);
+  // Stop within attack range; the player can stand closer to a wall than a brute.
+  const stop = radius + 12;
+  return distance <= stop ? from : { x: player.x + dx / distance * stop, y: player.y + dy / distance * stop };
 }
 function segmentHit(ax, ay, bx, by, cx, cy, radius) {
   const dx = bx - ax, dy = by - ay;
@@ -45,9 +83,9 @@ export class Game {
     this.player = { x: 640, y: 410, angle: -.65, hp: 100, maxHp: 100, stamina: 100, speed: 190, invulnerable: 0 };
     this.gun = { ammo: 18, mag: 18, reserve: 144, damage: 34, interval: .19, cooldown: 0, reload: 0, reloadTime: 1.4 };
     this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
-    this.remaining = 0; this.total = 0; this.spawnClock = 0; this.flowClock = 0;
-    this.flow = []; this.events = []; this.banner = 0; this.hitFlash = 0;
-    this.choices = []; this.flowField();
+    this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
+    this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
+    this.choices = [];
   }
   emit(type, data = {}) { this.events.push({ type, ...data }); }
   start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
@@ -80,7 +118,8 @@ export class Game {
     if (this.state !== 'playing' || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     const angle = p.angle + (this.random() - .5) * .035;
-    this.bullets.push({ x: p.x + Math.cos(angle) * 28, y: p.y + Math.sin(angle) * 28, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: .9 });
+    // Start collision detection at the survivor, so the muzzle cannot skip a close target.
+    this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: .9 });
     g.ammo--; g.cooldown = g.interval; this.emit('shot');
     this.burst(p.x + Math.cos(angle) * 31, p.y + Math.sin(angle) * 31, '#f5d88c', 4, 65);
   }
@@ -96,20 +135,20 @@ export class Game {
     this.enemies.push({ x, y, hp, maxHp: hp, type, r: type === 'brute' ? 21 : 14, speed: (type === 'runner' ? 125 : type === 'brute' ? 48 : 65) * (1 + this.wave * .025) * Math.sqrt(this.scale), phase: this.random() * 6.28, hit: 0 });
     this.remaining--;
   }
-  flowField() {
-    const cols = 32, rows = 20, size = 40;
-    const dist = new Int16Array(cols * rows).fill(-1);
-    const px = clamp(Math.floor(this.player.x / size), 0, cols - 1), py = clamp(Math.floor(this.player.y / size), 0, rows - 1);
-    const queue = [py * cols + px]; dist[queue[0]] = 0;
-    for (let i = 0; i < queue.length; i++) {
-      const idx = queue[i], x = idx % cols, y = Math.floor(idx / cols);
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy, ni = ny * cols + nx;
-        if (nx < 0 || nx >= cols || ny < 0 || ny >= rows || dist[ni] !== -1 || blocked(nx * size + 20, ny * size + 20, 14)) continue;
-        dist[ni] = dist[idx] + 1; queue.push(ni);
-      }
+  updatePaths(radius) {
+    const graph = navigationGraph(radius), visited = new Set();
+    const costs = graph.nodes.map(n => {
+      const target = approachPoint(n, this.player, radius);
+      return clearLine(n.x, n.y, target.x, target.y, radius) ? Math.hypot(n.x - target.x, n.y - target.y) : Infinity;
+    });
+    for (let i = 0; i < graph.nodes.length; i++) {
+      let current = -1;
+      for (let j = 0; j < costs.length; j++) if (!visited.has(j) && costs[j] < Infinity && (current === -1 || costs[j] < costs[current])) current = j;
+      if (current === -1) break;
+      visited.add(current);
+      for (const edge of graph.edges[current]) costs[edge.index] = Math.min(costs[edge.index], costs[current] + edge.cost);
     }
-    this.flow = dist;
+    const paths = { ...graph, costs }; this.paths.set(radius, paths); return paths;
   }
   update(dt, input = {}) {
     if (this.state !== 'playing') return;
@@ -125,7 +164,8 @@ export class Game {
     const sprint = input.sprint && length > 0 && p.stamina > 2;
     p.stamina = clamp(p.stamina + (sprint ? -29 : 20) * dt, 0, 100);
     move(p, dx * p.speed * (sprint ? 1.65 : 1) * dt, dy * p.speed * (sprint ? 1.65 : 1) * dt, 14);
-    if (input.aim) p.angle = Math.atan2(input.aim.y - p.y, input.aim.x - p.x);
+    const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
+    if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
     if (input.autoAim && this.enemies.length) {
       const nearest = this.enemies.filter(e => clearLine(p.x, p.y, e.x, e.y)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
       if (nearest) p.angle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
@@ -133,23 +173,23 @@ export class Game {
     if (input.fire) this.shoot();
     this.spawnClock -= dt;
     if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); }
-    this.flowClock -= dt;
-    if (this.flowClock <= 0) { this.flowField(); this.flowClock = .35; }
+    this.pathClock -= dt;
+    if (this.pathClock <= 0) { this.paths.clear(); this.pathClock = .35; }
     for (const e of this.enemies) {
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
-      let tx = p.x, ty = p.y;
-      if (!clearLine(e.x, e.y, p.x, p.y)) {
-        const cx = Math.floor(e.x / 40), cy = Math.floor(e.y / 40);
+      let target = approachPoint(e, p, e.r);
+      if (!clearLine(e.x, e.y, target.x, target.y, e.r)) {
+        const paths = this.paths.get(e.r) || this.updatePaths(e.r);
         let best = Infinity;
-        for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) {
-          const nx = cx + ox, ny = cy + oy;
-          if (nx < 0 || nx >= 32 || ny < 0 || ny >= 20) continue;
-          const value = this.flow[ny * 32 + nx];
-          if (value >= 0 && value < best && clearLine(e.x, e.y, nx * 40 + 20, ny * 40 + 20)) { best = value; tx = nx * 40 + 20; ty = ny * 40 + 20; }
+        target = e;
+        for (let i = 0; i < paths.nodes.length; i++) {
+          const n = paths.nodes[i], distance = Math.hypot(n.x - e.x, n.y - e.y), cost = distance + paths.costs[i];
+          if (distance > .1 && cost < best && clearLine(e.x, e.y, n.x, n.y, e.r)) { best = cost; target = n; }
         }
       }
-      const a = Math.atan2(ty - e.y, tx - e.x); e.angle = a;
-      move(e, Math.cos(a) * e.speed * dt, Math.sin(a) * e.speed * dt, e.r);
+      const a = Math.atan2(target.y - e.y, target.x - e.x); e.angle = a;
+      const step = Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
+      move(e, Math.cos(a) * step, Math.sin(a) * step, e.r);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
         p.hp = Math.max(0, p.hp - (e.type === 'brute' ? 24 : 12) * this.scale);
         p.invulnerable = .75; this.hitFlash = .22; this.emit('hurt');

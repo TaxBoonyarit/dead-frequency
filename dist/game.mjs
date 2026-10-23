@@ -1,4 +1,5 @@
 import { Game, W, H, OBSTACLES } from './engine.mjs';
+import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
@@ -119,8 +120,7 @@ function drawBody(e, isPlayer = false) {
 const demo = [{x:431,y:230,angle:1.1},{x:800,y:160,angle:1.8},{x:891,y:448,angle:3.2},{x:384,y:616,angle:-.8},{x:1040,y:380,angle:3.1},{x:655,y:708,angle:-1.4}].map(e => ({...e,hp:65,maxHp:65,type:'walker',phase:0}));
 function render(now) {
   const p = game.player;
-  cameraX = Math.max(0, Math.min(W - viewWidth, p.x - viewWidth / 2));
-  if (viewWidth > W) cameraX = (W - viewWidth) / 2;
+  cameraX = cameraOffset(p.x, viewWidth);
   ctx.clearRect(0, 0, canvas.width, H); rect(ctx, 0, 0, canvas.width, H, '#1c251b');
   ctx.save(); ctx.translate(-cameraX, 0); ctx.drawImage(ground, 0, 0);
   for (const s of game.stains) { circle(ctx, s.x, s.y, s.r, '#3d492b99'); circle(ctx, s.x + 4, s.y, s.r * .6, '#4a492c55'); }
@@ -153,7 +153,7 @@ function render(now) {
   // Subtle surveillance scan lines.
   ctx.fillStyle = '#0000000a'; for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, viewWidth, 1);
   if (pointer && game.state === 'playing' && !coarse) {
-    const x = pointer.x - cameraX, y = pointer.y;
+    const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y;
     ctx.strokeStyle = '#d5e69a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) line(ctx, [[x + dx * 10, y + dy * 10], [x + dx * 15, y + dy * 15]], '#d5e69a', 1);
   }
@@ -250,9 +250,10 @@ window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 function releaseInput() { keys.clear(); firing = false; joystick = { x: 0, y: 0 }; $('joystick-knob').style.transform = ''; }
 window.addEventListener('blur', () => { releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { releaseInput(); game.pause(); renderState(); } });
-function setPointer(e) { const r = canvas.getBoundingClientRect(); pointer = { x: (e.clientX - r.left) / r.width * viewWidth + cameraX, y: (e.clientY - r.top) / r.height * H }; }
+function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
+function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth)); }
 canvas.addEventListener('pointermove', setPointer);
-canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || coarse) return; setPointer(e); game.player.angle = Math.atan2(pointer.y - game.player.y, pointer.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
+canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || coarse) return; setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
 canvas.addEventListener('pointerup', () => firing = false); canvas.addEventListener('pointercancel', () => firing = false);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 const stick = $('joystick');
@@ -265,7 +266,7 @@ for (const ev of ['pointerup','pointercancel','lostpointercapture']) $('touch-fi
 $('touch-reload').onclick = () => game.reload();
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
-  game.update(dt, { x: (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joystick.x, y: (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointer, autoAim: coarse && firing });
+  game.update(dt, { x: (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joystick.x, y: (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
   for (const e of game.events.splice(0)) {
     if (e.type === 'shot') tone(140, .085, 'sawtooth', .045, 38);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
