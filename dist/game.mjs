@@ -345,7 +345,7 @@ function frame(now) {
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
   }
-  soundscape?.update({ playing: game.state === 'playing' && !document.hidden, health: game.player.hp / game.player.maxHp, boss: game.enemies.some(e => e.type === 'boss'), wave: game.wave });
+  soundscape?.update({ playing: game.state === 'playing' && !document.hidden, health: game.player.hp / game.player.maxHp, boss: game.enemies.some(e => e.type === 'boss'), wave: game.wave, enemies: game.enemies, player: game.player });
   renderState(); render(now);
   if (now - lastHud > 80) { updateHUD(); lastHud = now; }
   requestAnimationFrame(frame);

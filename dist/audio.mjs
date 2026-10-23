@@ -4,7 +4,7 @@ export class HorrorAudio {
     this.context = context; this.master = context.createGain();
     this.master.gain.value = 0; this.master.connect(context.destination);
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
-    this.nextPulse = 0; this.nextCreak = 0;
+    this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
     const data = this.noise.getChannelData(0);
@@ -30,8 +30,34 @@ export class HorrorAudio {
     osc.start(start); osc.stop(start + duration);
   }
   stopVoices() {
-    for (const { osc, gain } of this.voices) { osc.onended = null; osc.stop(); osc.disconnect(); gain.disconnect(); }
+    for (const { osc, gain, extras = [] } of this.voices) { osc.onended = null; osc.stop(); osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); }
     this.voices.clear();
+  }
+  zombieGrowl(type, distance, horizontal = 0) {
+    if (!this.enabled) return;
+    const [pitch, duration] = ({ walker: [83, 1.15], runner: [155, .65], brute: [54, 1.5], boss: [42, 1.9] })[type] || [83, 1.15];
+    const c = this.context, t = c.currentTime;
+    const buffer = c.createBuffer(1, Math.ceil(duration * c.sampleRate), c.sampleRate), data = buffer.getChannelData(0);
+    let phase = 0;
+    for (let i = 0; i < data.length; i++) {
+      const seconds = i / c.sampleRate, progress = seconds / duration;
+      phase += 2 * Math.PI * pitch * (1 - .3 * progress + .05 * Math.sin(seconds * 29)) / c.sampleRate;
+      const throat = Math.sin(phase) * .5 + Math.sin(phase * 2) * .22 + Math.sin(phase * 3) * .12;
+      data[i] = (throat + (Math.random() * 2 - 1) * .17) * (.7 + .3 * Math.sin(seconds * 38));
+    }
+    const osc = c.createBufferSource(), filter = c.createBiquadFilter(), gain = c.createGain();
+    osc.buffer = buffer; filter.type = 'lowpass'; filter.frequency.value = type === 'runner' ? 1300 : 650; filter.Q.value = 2;
+    const volume = .012 + .085 * Math.max(0, 1 - distance / 560);
+    gain.gain.setValueAtTime(.0001, t); gain.gain.linearRampToValueAtTime(volume, t + .12);
+    gain.gain.exponentialRampToValueAtTime(.0001, t + duration);
+    osc.connect(filter); filter.connect(gain); const extras = [filter];
+    if (c.createStereoPanner) {
+      const pan = c.createStereoPanner(); pan.pan.value = Math.max(-.85, Math.min(.85, horizontal / 300));
+      gain.connect(pan); pan.connect(this.master); extras.push(pan);
+    } else gain.connect(this.master);
+    const voice = { osc, gain, extras }; this.voices.add(voice);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); this.voices.delete(voice); };
+    osc.start(); osc.stop(t + duration);
   }
   startAmbience() {
     if (this.sources.length) return;
@@ -47,13 +73,14 @@ export class HorrorAudio {
     breath.frequency.value = .13; depth.gain.value = .007; breath.connect(depth); depth.connect(droneGain.gain);
     this.sources = [wind, drone, detuned, breath]; this.nodes = [bus, filter, droneGain, depth];
     this.sources.forEach(n => n.start()); this.droneGain = droneGain;
+    this.nextGrowl = c.currentTime + .5;
     this.nextPulse = c.currentTime; this.nextCreak = c.currentTime + 5;
   }
   stopAmbience() {
     this.sources.forEach(n => { n.stop(); n.disconnect(); }); this.nodes.forEach(n => n.disconnect());
     this.sources = []; this.nodes = []; this.droneGain = null;
   }
-  update({ playing, health, boss, wave }) {
+  update({ playing, health, boss, wave, enemies = [], player }) {
     if (!this.enabled || !playing) {
       if (this.sources.length) { this.stopAmbience(); this.stopVoices(); }
       return;
@@ -67,6 +94,17 @@ export class HorrorAudio {
         this.tone(65, .15, 'sine', volume, 36); this.tone(57, .12, 'sine', volume * .65, 32, .19);
       }
       this.nextPulse = t + (danger ? .72 : 1.4);
+    }
+    if (player && t >= this.nextGrowl) {
+      let nearest = null, distance = 560;
+      for (const enemy of enemies) {
+        const d = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+        if (enemy.hp > 0 && d < distance) { nearest = enemy; distance = d; }
+      }
+      if (nearest) {
+        this.zombieGrowl(nearest.type, distance, nearest.x - player.x);
+        this.nextGrowl = t + (nearest.type === 'runner' ? 1.5 : 2.6) + Math.random() * 1.2;
+      }
     }
     if (t >= this.nextCreak) {
       this.tone(180 + Math.random() * 90, 1.8, 'triangle', .012, 75);
