@@ -91,7 +91,7 @@ function paintGround() {
 paintGround();
 function drawBody(e, isPlayer = false) {
   ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle || 0);
-  const s = isPlayer ? 1 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
+  const s = isPlayer ? 1 : e.type === 'boss' ? 1.8 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
   const step = Math.sin(e.phase || game.time * 12) * 3;
   ctx.shadowColor = '#000a'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
   circle(ctx, 0, 0, 15, '#080e0b44'); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -107,7 +107,7 @@ function drawBody(e, isPlayer = false) {
       ctx.fillStyle = '#ffe4a2'; ctx.beginPath(); ctx.moveTo(31, -4); ctx.lineTo(48, -9); ctx.lineTo(42, 0); ctx.lineTo(49, 6); ctx.lineTo(31, 3); ctx.fill();
     }
   } else {
-    const color = e.hit > 0 ? '#d4d1a2' : e.type === 'runner' ? '#6f5841' : e.type === 'brute' ? '#6b7250' : '#536946';
+    const color = e.hit > 0 ? '#d4d1a2' : e.type === 'boss' ? (e.ability === 'acid' ? '#9baf51' : '#a65d49') : e.type === 'runner' ? '#6f5841' : e.type === 'brute' ? '#6b7250' : '#536946';
     circle(ctx, -1, 0, 13, color);
     rect(ctx, 5, -13, 16 + step, 5, color); rect(ctx, 5, 8, 17 - step, 5, color);
     circle(ctx, 23 + step, -10, 3, '#98a370'); circle(ctx, 22 - step, 11, 3, '#98a370');
@@ -134,6 +134,12 @@ function render(now) {
     else for (let i = -1; i <= 1; i++) rect(ctx, d.x + i * 4 - 1, d.y - 4, 2, 8, c);
   }
   const enemies = game.state === 'menu' ? demo : game.enemies;
+  for (const h of game.hazards) { circle(ctx, h.x, h.y, h.r, h.color + '66'); }
+  for (const e of enemies) if (e.type === 'boss' && e.windup > 0) {
+    ctx.strokeStyle = '#ffab78'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(e.targetX, e.targetY, e.ability === 'acid' ? 72 : 105, 0, Math.PI * 2); ctx.stroke();
+    if (e.ability === 'charge') line(ctx, [[e.x, e.y], [e.targetX, e.targetY]], '#ffab78', 7);
+  }
   enemies.forEach(e => drawBody(e));
   // A flashlight gives direction without hiding the paths around the survivor.
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
@@ -185,6 +191,9 @@ function updateHUD() {
   $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
   $('ammo-label').innerHTML = `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
   $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : g.ammo === 0 && g.reserve === 0 ? 'FIND AMMO' : WEAPONS.find(w => w.id === game.weaponId).name;
+  const boss = game.enemies.find(e => e.type === 'boss');
+  $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
+  if (boss) { $('boss-name').textContent = `${boss.name} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
   $('credits').textContent = `${game.credits} CR`;
   const shopLink = $('wave-shop-button');
   if (shopLink) shopLink.textContent = `ร้านอาวุธ · ${game.credits} CR ↗`;
@@ -318,6 +327,7 @@ function frame(now) {
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') tone(250, .06, 'square', .015, 160);
     if (e.type === 'loaded') tone(450, .07, 'square', .015, 550);
+    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; tone(90, .7, 'sawtooth', .05, 55); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${e.wave === 10 ? 'FINAL TRANSMISSION' : 'THEY HEARD YOU.'}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);

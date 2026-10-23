@@ -5,6 +5,11 @@ export const WEAPONS = [
   { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด หยุดศัตรูในระยะประชิด', price: 140, damage: 14, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
   { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 180, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
 ];
+export const BOSSES = [
+  ['THE WARDEN', 'slam'], ['RED HOUND', 'charge'], ['ACID MOTHER', 'acid'],
+  ['IRON GRAVEDIGGER', 'slam'], ['NIGHT STALKER', 'charge'], ['PLAGUE HERALD', 'acid'],
+  ['BONE COLOSSUS', 'slam'], ['BLOOD REAPER', 'charge'], ['THE CONTAMINATED', 'acid'], ['PATIENT ZERO', 'slam'],
+].map(([name, ability], i) => ({ name, ability, hp: 300 + i * 100, reward: 60 + i * 15 }));
 export const OBSTACLES = [
   { x: 95, y: 95, w: 245, h: 170, kind: 'building', label: 'WAREHOUSE 04' },
   { x: 920, y: 85, w: 255, h: 185, kind: 'building', label: 'NO ENTRY' },
@@ -90,7 +95,7 @@ export class Game {
     this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: 144, cooldown: 0, reload: 0 };
-    this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
+    this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
     this.choices = [];
@@ -118,7 +123,7 @@ export class Game {
   }
   start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
   nextWave() {
-    this.wave++; this.total = 6 + this.wave * 3; this.remaining = this.total;
+    this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
     this.spawnClock = .3; this.banner = 3;
     this.emit('wave', { wave: this.wave });
   }
@@ -158,7 +163,40 @@ export class Game {
   burst(x, y, color, count, force = 70) {
     for (let i = 0; i < count; i++) { const a = this.random() * Math.PI * 2, s = this.random() * force; this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .2 + this.random() * .35, color }); }
   }
+  spawnBoss() {
+    const spec = BOSSES[this.wave - 1];
+    const hp = spec.hp * this.scale;
+    const boss = { ...spec, x: W / 2, y: 32, hp, maxHp: hp, type: 'boss', r: 25,
+      speed: spec.ability === 'charge' ? 85 : 52, phase: 0, hit: 0, attackClock: 2.5, windup: 0, dash: 0 };
+    this.enemies.push(boss); this.remaining--; this.emit('boss', { name: spec.name });
+  }
+  hurtPlayer(damage) {
+    const p = this.player;
+    if (p.invulnerable > 0 || this.state !== 'playing') return;
+    p.hp = Math.max(0, p.hp - damage * this.scale); p.invulnerable = .75;
+    this.hitFlash = .22; this.emit('hurt'); this.burst(p.x, p.y, '#c36f4f', 10);
+    if (p.hp <= 0) { this.state = 'dead'; this.emit('dead'); }
+  }
+  updateBoss(e, dt) {
+    if (e.windup > 0) {
+      e.windup = Math.max(0, e.windup - dt);
+      if (e.windup === 0) {
+        if (e.ability === 'charge') e.dash = .65;
+        else this.hazards.push({ x: e.targetX, y: e.targetY, r: e.ability === 'acid' ? 72 : 105, life: .35, damage: 24 + this.wave, color: e.ability === 'acid' ? '#bddc65' : '#ef986f' });
+      }
+    } else if (e.dash > 0) e.dash = Math.max(0, e.dash - dt);
+    else {
+      e.attackClock -= dt;
+      if (e.attackClock <= 0) {
+        e.targetX = e.ability === 'slam' ? e.x : this.player.x;
+        e.targetY = e.ability === 'slam' ? e.y : this.player.y;
+        e.chargeAngle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
+        e.windup = 1.1; e.attackClock = this.wave === 10 ? 2 : 3.5;
+      }
+    }
+  }
   spawn() {
+    if (this.remaining === 1) { this.spawnBoss(); return; }
     const edge = Math.floor(this.random() * 4), inset = 22;
     let x = edge < 2 ? inset + this.random() * (W - inset * 2) : edge === 2 ? inset : W - inset;
     let y = edge >= 2 ? inset + this.random() * (H - inset * 2) : edge === 0 ? inset : H - inset;
@@ -208,6 +246,7 @@ export class Game {
     this.pathClock -= dt;
     if (this.pathClock <= 0) { this.paths.clear(); this.pathClock = .35; }
     for (const e of this.enemies) {
+      if (e.type === 'boss') this.updateBoss(e, dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
       let target = approachPoint(e, p, e.r);
       if (!clearLine(e.x, e.y, target.x, target.y, e.r)) {
@@ -220,15 +259,20 @@ export class Game {
         }
       }
       const a = Math.atan2(target.y - e.y, target.x - e.x); e.angle = a;
-      const step = Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
-      move(e, Math.cos(a) * step, Math.sin(a) * step, e.r);
+      const step = e.windup > 0 ? 0 : e.dash > 0 ? 360 * dt : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
+      const direction = e.dash > 0 ? e.chargeAngle : a;
+      move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
-        p.hp = Math.max(0, p.hp - (e.type === 'brute' ? 24 : 12) * this.scale);
-        p.invulnerable = .75; this.hitFlash = .22; this.emit('hurt');
-        this.burst(p.x, p.y, '#c36f4f', 10);
-        if (p.hp <= 0) { this.state = 'dead'; this.emit('dead'); return; }
+        this.hurtPlayer(e.type === 'boss' ? 28 : e.type === 'brute' ? 24 : 12);
+        if (this.state === 'dead') return;
       }
     }
+    for (const h of this.hazards) {
+      h.life -= dt;
+      if (Math.hypot(h.x - p.x, h.y - p.y) < h.r + 14) this.hurtPlayer(h.damage);
+    }
+    this.hazards = this.hazards.filter(h => h.life > 0);
+    if (this.state === 'dead') return;
     for (const b of this.bullets) {
       const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
       b.life -= dt;
@@ -241,12 +285,13 @@ export class Game {
         if (e) {
           e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
           if (e.hp <= 0) {
-            const reward = e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
+            const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
             this.kills++; this.score += reward * 10; this.credits += reward;
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();
             if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
+            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
             this.emit('kill');
           }
         }
