@@ -1,4 +1,5 @@
 import { Game, W, H, OBSTACLES, WEAPONS } from './engine.mjs';
+import { controlKey, keyboardMovement } from './input.mjs';
 import { HorrorAudio } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
@@ -300,7 +301,7 @@ $('close-manual').onclick = $('manual-done').onclick = () => $('manual').close()
 $('manual').addEventListener('close', () => { if (pausedForManual && game.state === 'paused') { game.pause(); renderState(); canvas.focus({ preventScroll: true }); } pausedForManual = false; });
 window.addEventListener('keydown', e => {
   if ($('manual').open || $('armory').open) return;
-  const key = e.key.toLowerCase();
+  const key = controlKey(e);
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
   if (e.target.matches('button') && [' ', 'enter'].includes(key)) return;
   if (!e.repeat && (key === 'escape' || key === 'p')) { game.pause(); renderState(); return; }
@@ -308,7 +309,7 @@ window.addEventListener('keydown', e => {
   if (key === ' ' && !e.repeat) game.shoot();
   keys.add(key);
 });
-window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+window.addEventListener('keyup', e => keys.delete(controlKey(e)));
 function releaseInput() { keys.clear(); firing = false; joystick = { x: 0, y: 0 }; $('joystick-knob').style.transform = ''; }
 window.addEventListener('blur', () => { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); game.pause(); renderState(); } });
@@ -328,7 +329,8 @@ for (const ev of ['pointerup','pointercancel','lostpointercapture']) $('touch-fi
 $('touch-reload').onclick = () => game.reload();
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
-  game.update(dt, { x: (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joystick.x, y: (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
+  const movement = keyboardMovement(keys);
+  game.update(dt, { x: movement.x + joystick.x, y: movement.y + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
   for (const e of game.events.splice(0)) {
     if (e.type === 'shot') tone(e.weapon === 'shotgun' ? 95 : e.weapon === 'rifle' ? 180 : 140, e.weapon === 'shotgun' ? .16 : .085, 'sawtooth', .045, 38);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
