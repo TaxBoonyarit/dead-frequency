@@ -1,0 +1,11 @@
+{
+  "name": "dead-frequency",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node --check dist/engine.mjs && node --check dist/game.mjs"
+  }
+}

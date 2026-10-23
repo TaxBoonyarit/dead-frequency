@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111410">
+  <meta name="description" content="DEAD FREQUENCY — เกมเอาตัวรอดจากซอมบี้ ฝ่าความมืดให้ครบ 10 ระลอกเพื่อไปถึงจุดอพยพ">
+  <title>DEAD FREQUENCY — Survive the silence.</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23111410'/%3E%3Cpath d='M9 33h9l5-17 10 35 7-25 5 7h10' fill='none' stroke='%23d5e79c' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="Dead Frequency หน้าหลัก"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 21h8l4-12 8 24 5-17 4 5h5"/></svg><span>DEAD<br>FREQUENCY<span class="brand-dot">®</span></span></a>
+      <div class="top-status"><span class="status-dot"></span> OFFLINE FROM THE WORLD. ONLINE TO SURVIVE.</div>
+      <div class="top-actions"><button id="manual-button" class="text-button">FIELD MANUAL <span>↗</span></button><span class="version">V.01</span></div>
+    </header>
+    <main>
+      <section class="intro">
+        <div><div class="eyebrow"><span class="small-cross">+</span> QUARANTINE ZONE / SECTOR 07</div><h1>THE LAST <span>SIGNAL.</span></h1><p>เมืองเงียบไปแล้ว แต่คุณยังมีลมหายใจ <span class="desktop-separator">—</span> อยู่รอดจนกว่าสัญญาณช่วยเหลือจะมาถึง</p></div>
+        <div class="coordinates"><span>13°45′ N &nbsp; 100°30′ E</span><strong><span class="status-dot"></span> SIGNAL LOST</strong></div>
+      </section>
+      <div class="operations">
+        <section class="game-panel" aria-label="พื้นที่เล่นเกม">
+          <div class="panel-top"><div><span class="live-dot"></span> LIVE FEED <span class="muted">/</span> <span class="sector">SECTOR 07</span></div><div class="game-tools"><button id="sound-button" aria-label="เปิดเสียงเกม" title="เปิด/ปิดเสียง">SOUND OFF</button><button id="fullscreen-button" aria-label="เต็มหน้าจอ" title="เต็มหน้าจอ">⛶</button></div></div>
+          <div class="viewport" id="viewport">
+            <canvas id="game" width="1280" height="800" aria-label="เกมยิงซอมบี้ ควบคุมด้วย WASD เล็งเมาส์ คลิกยิง R รีโหลด" tabindex="0"></canvas>
+            <div class="hud" id="hud" hidden>
+              <div class="vital"><span class="hud-label">VITALS <b id="health-label">100</b></span><div class="health-track"><i id="health-bar"></i></div><div class="stamina-track"><i id="stamina-bar"></i></div></div>
+              <div class="wave-hud"><span class="hud-label">WAVE</span><strong id="wave-label">01 <small>/ 10</small></strong></div>
+              <div class="ammo-hud"><span class="hud-label" id="gun-status">M19 / SIDEARM</span><strong id="ammo-label">18 <small>/ 144</small></strong></div>
+            </div>
+            <div class="overlay" id="menu-overlay">
+              <div class="menu-content"><div class="menu-tag"><span class="status-dot"></span> NO BACKUP. NO SECOND CHANCES.</div><h2>STAY ALIVE.<br><span>KEEP MOVING.</span></h2><p>ฝ่าฝูงซอมบี้ 10 ระลอก เพื่อไปให้ถึงเช้าวันใหม่<br>เก็บเสบียง อัปเกรดอาวุธ และอย่าหยุดเดิน</p><button class="primary" id="start-button">เริ่มภารกิจ <span>↗</span></button><div class="menu-note">HEADPHONES RECOMMENDED <span>·</span> SINGLE PLAYER</div></div>
+              <div class="feed-corner">CAM_07 <span>●</span> REC</div><div class="feed-time">DAY 001 &nbsp; / &nbsp; 02:47 AM</div>
+            </div>
+            <div class="overlay state-overlay" id="state-overlay" hidden><div id="state-content"></div></div>
+            <div class="wave-banner" id="wave-banner" hidden></div>
+            <div class="toast" id="toast" role="status" hidden></div>
+            <button id="pause-button" class="pause-button" aria-label="หยุดเกมชั่วคราว" hidden>Ⅱ</button>
+            <div class="touch-controls" id="touch-controls" hidden><div id="joystick" aria-label="ลากเพื่อเดิน"><i id="joystick-knob"></i></div><div class="touch-actions"><button id="touch-reload" aria-label="รีโหลด">R</button><button id="touch-fire" aria-label="กดค้างเพื่อยิง">FIRE</button></div></div>
+          </div>
+          <div class="panel-bottom"><span><i class="status-dot"></i> <span id="feed-status">AWAITING SURVIVOR</span></span><span id="session-time">00:00:00</span><span class="connection">LOCAL CONNECTION <i>▂▄▆</i></span></div>
+        </section>
+        <aside class="sidebar">
+          <section class="mission"><div class="section-label"><span>01 / THE OBJECTIVE</span><span>↗</span></div><h3>SURVIVE THE<br>DEAD HOURS.</h3><p>สัญญาณอพยพจะมาถึงเมื่อจบระลอกที่ 10<br>ทำทุกอย่างเพื่อมีชีวิตรอด</p><div class="mission-progress"><div><span>EVACUATION PROGRESS</span><b id="progress-label">0%</b></div><div class="progress-segments" id="progress-segments"></div></div></section>
+          <section class="difficulty-section"><div class="section-label">02 / THREAT LEVEL</div><div class="difficulty-options" role="group" aria-label="เลือกระดับความยาก"><button data-difficulty="recruit">RECRUIT</button><button data-difficulty="survivor" class="selected" aria-pressed="true">SURVIVOR</button><button data-difficulty="nightmare">NIGHTMARE</button></div><p id="difficulty-description">ภัยคุกคามมาตรฐาน สำหรับคนที่พร้อมสู้</p></section>
+          <section class="stats-section"><div class="section-label">03 / FIELD RECORD</div><dl><div><dt>ELIMINATIONS</dt><dd id="kills">000</dd></div><div><dt>CURRENT SCORE</dt><dd id="score">00000</dd></div><div class="best-score"><dt>PERSONAL BEST <span>↗</span></dt><dd id="best">00000</dd></div></dl></section>
+          <div class="radio-card"><svg viewBox="0 0 120 32" aria-hidden="true"><path d="M0 16h8l3-5 4 10 4-17 5 26 5-20 4 11 4-5h10l3-7 4 15 5-19 4 23 5-16 4 8 4-4h12l4-8 4 15 4-12 4 5h14"/></svg><span>“ถ้าได้ยินข้อความนี้…<br>อย่าให้พวกมันเข้ามาใกล้”</span><small>LAST TRANSMISSION / 02:41 AM</small></div>
+        </aside>
+      </div>
+      <section class="control-strip" aria-label="วิธีควบคุม"><span class="section-label">KNOW YOUR CONTROLS</span><div><span class="key-group"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>เดิน</span></div><div><kbd>↖</kbd><span>เล็งเมาส์ / คลิกยิง</span></div><div><kbd>R</kbd><span>รีโหลด</span></div><div><kbd>SHIFT</kbd><span>วิ่ง</span></div><div><kbd>ESC</kbd><span>พักเกม</span></div></section>
+      <footer><span>DEAD FREQUENCY <span class="muted">/</span> SURVIVE THE SILENCE.</span><span>THE WORLD ENDED. YOUR SHIFT DIDN’T.</span><span class="footer-mark">✳</span></footer>
+    </main>
+  </div>
+  <dialog id="manual"><button class="dialog-close" id="close-manual" aria-label="ปิดคู่มือ">×</button><div class="eyebrow">SURVIVOR'S HANDBOOK / 001</div><h2>FIELD MANUAL</h2><p class="manual-lead">เป้าหมายเดียว: อยู่ให้ถึงระลอกที่ 10</p><div class="manual-grid"><div><h3>01 / เคลื่อนไหว</h3><p>WASD หรือปุ่มลูกศรเพื่อเดิน กด Shift ค้างเพื่อวิ่ง โดยใช้พลังงานที่ฟื้นคืนเมื่อพัก บนมือถือให้ลากวงกลมด้านซ้าย</p></div><div><h3>02 / ต่อสู้</h3><p>เล็งด้วยเมาส์ กดคลิกซ้ายค้างหรือ Space เพื่อยิง กด R เพื่อรีโหลด บนมือถือกด FIRE ค้าง ระบบจะเล็งศัตรูที่มองเห็นให้</p></div><div><h3>03 / เก็บเสบียง</h3><p>เดินเข้าใกล้กล่องกระสุนและชุดปฐมพยาบาลเพื่อเก็บ กระสุนสีเหลืองเพิ่ม 30 นัด กากบาทสีเขียวฟื้นฟูเลือด 30</p></div><div><h3>04 / อยู่รอด</h3><p>จบแต่ละระลอกแล้วเลือกอัปเกรด 1 อย่าง คุณจะได้รับกระสุนสำรองและฟื้นฟูเลือดบางส่วน ระวังซอมบี้วิ่งเร็วและตัวถึกในระลอกหลัง</p></div></div><p class="manual-footer">ESC หรือ P เพื่อพักเกม · สถิติสูงสุดบันทึกในเบราว์เซอร์นี้</p><button class="primary" id="manual-done">เข้าใจแล้ว <span>↗</span></button></dialog>
+  <script type="module" src="game.mjs"></script>
+</body>
+</html>
