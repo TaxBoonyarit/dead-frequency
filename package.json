@@ -6,6 +6,6 @@
   "scripts": {
     "dev": "node server.mjs",
     "test": "node --test tests/*.test.mjs",
-    "check": "node --check dist/engine.mjs && node --check dist/game.mjs && node --check dist/view.mjs && node --check dist/audio.mjs && node --check dist/input.mjs"
+    "check": "node --check dist/engine.mjs && node --check dist/game.mjs && node --check dist/view.mjs && node --check dist/audio.mjs && node --check dist/input.mjs && node --check dist/zombie-art.mjs"
   }
 }

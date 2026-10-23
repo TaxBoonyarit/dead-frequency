@@ -35,3 +35,5 @@
 .audio-lab{padding:14px;border:1px solid #536342;margin:10px 0 18px}.audio-lab strong{font-size:14px;color:var(--accent)}.audio-lab>div{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.audio-lab button{border:1px solid #71825d;background:#2d3b25;color:#e2edcf;padding:9px 12px;font-size:12px}.audio-lab small{color:#b3c4a0;font-size:11px}.weapon-card .sound-preview{background:#31432a;color:#e2edcf;margin-bottom:8px;border-color:#71825d}.sound-preview:hover,.audio-lab button:hover{filter:brightness(1.2)}
 
 .weapon-range{font-size:11px;color:#c2d3ac;margin:8px 0;clear:both}
+
+.enemy-guide{margin:18px 0 25px;border:1px solid #49533f;background:#171f18}.enemy-guide canvas{width:100%;height:auto;display:block}.enemy-guide figcaption{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;text-align:center;color:#c3ba9c;font:9px var(--mono);padding:0 8px 14px}@media(max-width:520px){.enemy-guide figcaption{font-size:7px;padding:0 4px 10px}}

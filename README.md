@@ -67,3 +67,7 @@ Zombie vocalizations are synthesized locally: walkers groan, runners snarl brief
 Added JUDGE .44 revolver (120 CR), VANGUARD A4 assault rifle (240 CR), BASTION M60 LMG (320 CR), and LONGWATCH .50 sniper (380 CR). They use the existing shared reserve and run-only ownership. Shop range labels explain close-range versus long-range tradeoffs.
 
 Every weapon card has a sound preview; the shop also previews all four zombie types. Preview buttons enable sound after the click, cancel stale preview requests, and stop playback when closing the shop. Gunshots use four edited CC0 live-fire recordings by Tabasco (pistol, shotgun, rifle, SKS), with per-weapon pitch/level variations. See dist/audio/CREDITS.md for source and processing. Failed sample loads fall back to synthesis and can retry. Zombie voices remain procedural, with proximity and stereo positioning.
+
+## Zombie visuals
+
+Canvas-drawn zombie silhouettes now have crooked limbs, torn clothes, exposed ribs, recessed eye sockets and broken jaws. Runners crouch with longer reaching arms, brutes have swollen shoulders, and bosses have bone spines plus an enraged glow. Gait follows each enemy's movement phase. FIELD MANUAL includes a scaled reference view of all four silhouettes. Rendering is separate from enemy collision and combat stats.

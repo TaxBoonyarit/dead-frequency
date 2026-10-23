@@ -1,4 +1,5 @@
 import { Game, W, H, OBSTACLES, WEAPONS } from './engine.mjs';
+import { drawZombie } from './zombie-art.mjs';
 import { controlKey, keyboardMovement } from './input.mjs';
 import { HorrorAudio } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
@@ -91,7 +92,18 @@ function paintGround() {
   }
 }
 paintGround();
+const enemySheet = $('enemy-preview'), enemyCtx = enemySheet.getContext('2d');
+enemyCtx.fillStyle = '#171f18'; enemyCtx.fillRect(0, 0, 800, 190);
+for (const [i, type] of ['walker', 'runner', 'brute', 'boss'].entries()) {
+  enemyCtx.save(); enemyCtx.translate(100 + i * 200, 92); enemyCtx.scale(2.2, 2.2);
+  drawZombie(enemyCtx, { x: 0, y: 0, angle: -.8, type, phase: i * 1.4, stage: type === 'boss' ? 2 : 1 }); enemyCtx.restore();
+}
 function drawBody(e, isPlayer = false) {
+  if (!isPlayer) {
+    drawZombie(ctx, e, game.time);
+    if (e.hp < e.maxHp) { rect(ctx, e.x - 17, e.y - e.r - 10, 34, 3, '#121b12'); rect(ctx, e.x - 17, e.y - e.r - 10, 34 * e.hp / e.maxHp, 3, '#b9cd80'); }
+    return;
+  }
   ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle || 0);
   const s = isPlayer ? 1 : e.type === 'boss' ? 1.8 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
   const step = Math.sin(e.phase || game.time * 12) * 3;
@@ -108,17 +120,8 @@ function drawBody(e, isPlayer = false) {
     if (game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
       ctx.fillStyle = '#ffe4a2'; ctx.beginPath(); ctx.moveTo(31, -4); ctx.lineTo(48, -9); ctx.lineTo(42, 0); ctx.lineTo(49, 6); ctx.lineTo(31, 3); ctx.fill();
     }
-  } else {
-    const color = e.hit > 0 ? '#d4d1a2' : e.type === 'boss' ? (e.ability === 'acid' ? '#9baf51' : '#a65d49') : e.type === 'runner' ? '#6f5841' : e.type === 'brute' ? '#6b7250' : '#536946';
-    circle(ctx, -1, 0, 13, color);
-    rect(ctx, 5, -13, 16 + step, 5, color); rect(ctx, 5, 8, 17 - step, 5, color);
-    circle(ctx, 23 + step, -10, 3, '#98a370'); circle(ctx, 22 - step, 11, 3, '#98a370');
-    circle(ctx, 5, 0, 8, e.hit > 0 ? '#e4e7b2' : '#939e69');
-    circle(ctx, 10, -3, 1.4, '#e6be6c'); circle(ctx, 10, 3, 1.4, '#e6be6c');
-    rect(ctx, 10, -1, 2, 3, '#354128');
   }
   ctx.restore();
-  if (!isPlayer && e.hp < e.maxHp) { rect(ctx, e.x - 17, e.y - e.r - 10, 34, 3, '#121b12'); rect(ctx, e.x - 17, e.y - e.r - 10, 34 * e.hp / e.maxHp, 3, '#b9cd80'); }
 }
 const demo = [{x:431,y:230,angle:1.1},{x:800,y:160,angle:1.8},{x:891,y:448,angle:3.2},{x:384,y:616,angle:-.8},{x:1040,y:380,angle:3.1},{x:655,y:708,angle:-1.4}].map(e => ({...e,hp:65,maxHp:65,type:'walker',phase:0}));
 function render(now) {
