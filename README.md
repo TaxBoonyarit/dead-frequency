@@ -85,3 +85,7 @@ After the final enemy dies, the arena stays active for three seconds with AREA S
 ## Interface refinements
 
 The armory prioritizes purchase/equip actions, groups audio previews as secondary controls, and keeps balance and return navigation visible while scrolling. Filters show all, affordable unowned, or owned weapons, with a clear empty state. Zombie previews are collapsible. Active runs collapse the introduction to give the game more screen space, use larger touch targets, and display credits on the shop shortcut. Keyboard Space/Enter retain native button activation; toggling sound returns focus to the game. Health uses a labeled progressbar with current/max values.
+
+## Matched firearm recordings
+
+Gunshot playback now uses eight distinct CC0 recordings from The Free Firearm Sound Library. The SMG uses Carl Gustav M45, revolver uses S&W 642, shotgun uses Benelli Nova, assault rifle uses AR-15, and sniper uses a Tikka T3 bolt-action report. The LMG uses an AK-47 report as a heavier automatic-weapon substitute. Shop preview feedback and button tooltips identify each source model. All sample files are shipped with the site, trimmed to single shots, and peak-normalized. See dist/audio/CREDITS.md and recording-manifest.json for provenance and processing.

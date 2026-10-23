@@ -1,9 +1,14 @@
 export const GUN_AUDIO = {
-  pistol: ['pistol', 1, .25], smg: ['pistol', 1.22, .17], shotgun: ['shotgun', .9, .34],
-  rifle: ['rifle', 1.08, .28], revolver: ['pistol', .78, .3], assault: ['assault', 1, .23],
-  lmg: ['assault', .82, .25], sniper: ['rifle', .8, .34],
+  pistol: ['shot-pistol', 1, .25], smg: ['shot-smg', 1, .18], shotgun: ['shot-shotgun', 1, .3],
+  rifle: ['shot-rifle', 1, .26], revolver: ['shot-revolver', 1, .28], assault: ['shot-assault', 1, .22],
+  lmg: ['shot-lmg', .96, .24], sniper: ['shot-sniper', 1, .32],
 };
-// Procedural horror score: no downloads, loops, or background timers.
+export const GUN_RECORDINGS = {
+  pistol: 'Walther PPQ · 9mm', smg: 'Carl Gustav M45 · SMG', shotgun: 'Benelli Nova · 12 gauge',
+  rifle: 'SKS · semi-auto', revolver: 'Smith & Wesson 642 · revolver', assault: 'AR-15 · carbine',
+  lmg: 'AK-47 · automatic rifle', sniper: 'Tikka T3 · bolt-action',
+};
+// Local firearm recordings and procedural horror ambience; no background timers.
 export class HorrorAudio {
   constructor(context) {
     this.context = context; this.master = context.createGain();
@@ -37,7 +42,7 @@ export class HorrorAudio {
   }
   loadWeaponAudio() {
     if (this.gunLoading) return this.gunLoading;
-    this.gunLoading = Promise.allSettled(['pistol', 'shotgun', 'rifle', 'assault', 'reload-out', 'reload-in', 'reload-bolt'].filter(id => !this.gunBuffers.has(id)).map(async id => {
+    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt'].filter(id => !this.gunBuffers.has(id)).map(async id => {
       const response = await fetch(new URL(`./audio/${id}.wav`, import.meta.url));
       if (!response.ok) throw new Error('Audio unavailable');
       const buffer = await this.context.decodeAudioData(await response.arrayBuffer());

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HorrorAudio } from '../dist/audio.mjs';
+import { HorrorAudio, GUN_AUDIO } from '../dist/audio.mjs';
 function context() {
   const param = () => ({ value: 0, cancelScheduledValues() {}, setValueAtTime(v) { this.value = v; }, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { this.peak = v; }, setTargetAtTime(v) { this.value = v; } });
   const nodes = [];
@@ -55,7 +55,7 @@ test('zombie types have distinct lengths, proximity controls volume and mute can
 
 test('recorded gun voices stop on mute and return to the voice pool when ended', () => {
   const c=context(), a=new HorrorAudio(c); a.setEnabled(true);
-  for(const id of ['pistol','shotgun','rifle','assault']) a.gunBuffers.set(id,{duration:.6});
+  for(const id of Object.values(GUN_AUDIO).map(profile=>profile[0])) a.gunBuffers.set(id,{duration:.6});
   for(const id of ['pistol','smg','shotgun','rifle','revolver','assault','lmg','sniper']) assert.equal(a.gunshot(id),true);
   assert.equal(a.voices.size,8);
   const first=[...a.voices][0]; first.osc.onended(); assert.equal(a.voices.size,7); assert.ok(first.gain.disconnected);
@@ -71,9 +71,9 @@ test('failed sample loads retry without redownloading successful samples', async
   globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,6);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,7);
-    assert.equal([...counts.values()].reduce((a,b)=>a+b),8);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,10);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,11);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),12);
   } finally {globalThis.fetch=originalFetch;}
 });
 
