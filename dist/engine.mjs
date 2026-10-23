@@ -1,4 +1,10 @@
 export const W = 1280, H = 800;
+export const WEAPONS = [
+  { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 1.4, pellets: 1, spread: .035, range: .9 },
+  { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 90, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
+  { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด หยุดศัตรูในระยะประชิด', price: 140, damage: 14, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
+  { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 180, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
+];
 export const OBSTACLES = [
   { x: 95, y: 95, w: 245, h: 170, kind: 'building', label: 'WAREHOUSE 04' },
   { x: 920, y: 85, w: 255, h: 185, kind: 'building', label: 'NO ENTRY' },
@@ -81,13 +87,35 @@ export class Game {
     this.scale = difficulty === 'recruit' ? .72 : difficulty === 'nightmare' ? 1.35 : 1;
     this.state = 'menu'; this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     this.player = { x: 640, y: 410, angle: -.65, hp: 100, maxHp: 100, stamina: 100, speed: 190, invulnerable: 0 };
-    this.gun = { ammo: 18, mag: 18, reserve: 144, damage: 34, interval: .19, cooldown: 0, reload: 0, reloadTime: 1.4 };
+    this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
+    this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
+    this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: 144, cooldown: 0, reload: 0 };
     this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
     this.choices = [];
   }
   emit(type, data = {}) { this.events.push({ type, ...data }); }
+  weaponStats(id) {
+    const weapon = WEAPONS.find(w => w.id === id);
+    if (!weapon) return null;
+    const b = this.weaponBonuses;
+    return { damage: weapon.damage * b.damage, interval: weapon.interval * b.rate, mag: weapon.mag + b.mag, reloadTime: weapon.reloadTime * b.reload, pellets: weapon.pellets, spread: weapon.spread, range: weapon.range };
+  }
+  buyWeapon(id) {
+    const weapon = WEAPONS.find(w => w.id === id);
+    if (this.state !== 'upgrade' || !weapon || this.ownedWeapons.has(id) || this.credits < weapon.price) return false;
+    this.credits -= weapon.price;
+    this.ownedWeapons.set(id, this.weaponStats(id).mag);
+    this.equipWeapon(id); this.emit('purchase', { weapon: id }); return true;
+  }
+  equipWeapon(id) {
+    if (this.state !== 'upgrade' || !this.ownedWeapons.has(id) || id === this.weaponId) return false;
+    this.ownedWeapons.set(this.weaponId, this.gun.ammo);
+    const stats = this.weaponStats(id);
+    this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0 };
+    this.weaponId = id; return true;
+  }
   start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
   nextWave() {
     this.wave++; this.total = 6 + this.wave * 3; this.remaining = this.total;
@@ -103,12 +131,13 @@ export class Game {
   upgrade(id) {
     if (this.state !== 'upgrade' || !this.choices.some(c => c.id === id)) return;
     const g = this.gun, p = this.player;
-    if (id === 'damage') g.damage *= 1.35;
+    if (id === 'damage') this.weaponBonuses.damage *= 1.35;
     if (id === 'speed') p.speed *= 1.15;
-    if (id === 'mag') g.mag += 6;
-    if (id === 'rate') g.interval *= .8;
+    if (id === 'mag') this.weaponBonuses.mag += 6;
+    if (id === 'rate') this.weaponBonuses.rate *= .8;
     if (id === 'health') p.maxHp += 25;
-    if (id === 'reload') g.reloadTime *= .75;
+    if (id === 'reload') this.weaponBonuses.reload *= .75;
+    Object.assign(g, this.weaponStats(this.weaponId));
     p.hp = Math.min(p.maxHp, p.hp + (id === 'health' ? p.maxHp : 20));
     g.ammo = g.mag; g.reload = 0; g.reserve += 36;
     this.state = 'playing'; this.nextWave();
@@ -117,11 +146,14 @@ export class Game {
     const g = this.gun, p = this.player;
     if (this.state !== 'playing' || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
-    const angle = p.angle + (this.random() - .5) * .035;
-    // Start collision detection at the survivor, so the muzzle cannot skip a close target.
-    this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: .9 });
-    g.ammo--; g.cooldown = g.interval; this.emit('shot');
-    this.burst(p.x + Math.cos(angle) * 31, p.y + Math.sin(angle) * 31, '#f5d88c', 4, 65);
+    for (let i = 0; i < g.pellets; i++) {
+      const spread = g.pellets === 1 ? (this.random() - .5) * g.spread : (i / (g.pellets - 1) - .5) * g.spread + (this.random() - .5) * .015;
+      const angle = p.angle + spread;
+      // Sweep from the survivor so even point-blank targets are hit.
+      this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: g.range, damage: g.damage });
+    }
+    g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
+    this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
   }
   burst(x, y, color, count, force = 70) {
     for (let i = 0; i < count; i++) { const a = this.random() * Math.PI * 2, s = this.random() * force; this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .2 + this.random() * .35, color }); }
@@ -207,9 +239,10 @@ export class Game {
         if (blocked(sx, sy, 1)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
         const e = this.enemies.find(e => e.hp > 0 && segmentHit(sx, sy, sx, sy, e.x, e.y, e.r + 3));
         if (e) {
-          e.hp -= g.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
+          e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
           if (e.hp <= 0) {
-            this.kills++; this.score += e.type === 'brute' ? 300 : e.type === 'runner' ? 150 : 100;
+            const reward = e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
+            this.kills++; this.score += reward * 10; this.credits += reward;
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();

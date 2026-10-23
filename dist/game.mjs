@@ -1,4 +1,4 @@
-import { Game, W, H, OBSTACLES } from './engine.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS } from './engine.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
@@ -7,7 +7,7 @@ const coarse = matchMedia('(pointer:coarse)').matches;
 const keys = new Set();
 let firing = false, pointer = null, joystick = { x: 0, y: 0 }, viewWidth = W, cameraX = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, joystickId = null, pausedForManual = false;
+let soundEnabled = false, audio = null, joystickId = null, pausedForManual = false, pausedForShop = false;
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -99,7 +99,8 @@ function drawBody(e, isPlayer = false) {
   if (isPlayer) {
     circle(ctx, 0, 0, 12, '#687d52'); rect(ctx, -9, -9, 9, 18, '#364b35');
     circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
-    rect(ctx, 10, -4, 21, 5, '#171f1a'); rect(ctx, 11, -4, 11, 3, '#9a9d75');
+    const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35 })[game.weaponId];
+    rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
     circle(ctx, 1, 0, 8, '#a1a97b'); circle(ctx, 0, -1, 7, '#6e8158');
     line(ctx, [[-3, -6], [4, -4]], '#bac38c88', 2);
     if (game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
@@ -183,7 +184,10 @@ function updateHUD() {
   $('stamina-bar').style.width = `${p.stamina}%`;
   $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
   $('ammo-label').innerHTML = `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
-  $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : g.ammo === 0 && g.reserve === 0 ? 'FIND AMMO' : 'M19 / SIDEARM';
+  $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : g.ammo === 0 && g.reserve === 0 ? 'FIND AMMO' : WEAPONS.find(w => w.id === game.weaponId).name;
+  $('credits').textContent = `${game.credits} CR`;
+  const shopLink = $('wave-shop-button');
+  if (shopLink) shopLink.textContent = `ร้านอาวุธ · ${game.credits} CR ↗`;
   $('kills').textContent = String(game.kills).padStart(3, '0'); $('score').textContent = String(game.score).padStart(5, '0');
   $('session-time').textContent = timeText(game.time);
   const completed = game.state === 'won' ? 10 : game.state === 'upgrade' ? game.wave : Math.max(0, game.wave - 1);
@@ -208,7 +212,8 @@ function renderState() {
     c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">กลับไปลุยต่อ <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>';
     $('resume-button').onclick = () => game.pause(); $('quit-button').onclick = returnMenu;
   } else if (s === 'upgrade') {
-    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">เลือกอัปเกรด 1 อย่าง ก่อนฝ่าระลอกถัดไป<br>ฟื้นฟูเลือด 20 และรับกระสุนสำรอง 36 นัด</p><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">SELECT UPGRADE <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
+    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">ซื้อปืนก่อน แล้วเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป<br>ฟื้นฟูเลือด 20 และรับกระสุนสำรอง 36 นัด</p><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">SELECT UPGRADE <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
+    $('wave-shop-button').onclick = openShop;
     c.querySelectorAll('[data-upgrade]').forEach(b => b.onclick = () => { game.upgrade(b.dataset.upgrade); tone(550, .15, 'sine', .04, 900); });
   } else if (s === 'dead' || s === 'won') {
     storeBest();
@@ -218,6 +223,46 @@ function renderState() {
   if (s !== 'playing') { $('wave-banner').hidden = true; $('toast').hidden = true; }
   if (s === 'paused' || s === 'dead' || s === 'won') c.querySelector('button')?.focus({ preventScroll: true });
 }
+function weaponArt(id) {
+  const shapes = {
+    pistol: '<path d="M28 22h72v16H69l-8 27H43l4-27H28z"/><path d="M96 24h11v8H96z"/>',
+    smg: '<path d="M17 27h75v17H70l-3 23H54l2-23H39l-5 18H20l7-25H17zM92 30h25v6H92zM7 20h18v26H7z"/>',
+    shotgun: '<path d="M7 35l25-11h51v12H42l-9 18H19l4-13-16 5zM81 24h40v6H81zM81 33h40v5H81zM50 39h37v8H50z"/>',
+    rifle: '<path d="M6 28l27-5h50v17H61l-5 22H42l3-22H29l-23 9zM82 26h41v6H82zM56 12h25v7H56zM65 18h5v8h-5z"/>',
+  };
+  return `<svg viewBox="0 0 130 80" aria-hidden="true">${shapes[id]}</svg>`;
+}
+function renderShop() {
+  const canTrade = game.state === 'upgrade';
+  $('shop-balance').textContent = `${game.credits} CR`;
+  $('shop-description').textContent = canTrade ? 'พื้นที่ปลอดภัยแล้ว ซื้อหรือสลับปืนได้ก่อนเริ่มระลอกถัดไป' : 'ดูอาวุธได้ที่นี่ ซื้อและสลับปืนได้หลังจบระลอก · กำจัดซอมบี้รับ 10–30 CR';
+  $('armory-done').firstChild.textContent = canTrade ? 'กลับไปเลือกอัปเกรด ' : 'กลับไปยังเกม ';
+  $('weapon-grid').innerHTML = WEAPONS.map(w => {
+    const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
+    const disabled = !canTrade || equipped || (!owned && game.credits < w.price);
+    const action = equipped ? 'กำลังใช้งาน' : owned ? 'สลับมาใช้' : !canTrade ? `ซื้อหลังจบระลอก · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
+    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
+  }).join('');
+  $('weapon-grid').querySelectorAll('[data-weapon]').forEach(button => button.onclick = () => {
+    const id = button.dataset.weapon, owned = game.ownedWeapons.has(id);
+    const success = owned ? game.equipWeapon(id) : game.buyWeapon(id);
+    if (!success) return;
+    $('shop-feedback').textContent = `${owned ? 'เปลี่ยนเป็น' : 'ซื้อแล้ว'} ${WEAPONS.find(w => w.id === id).name}`;
+    tone(700, .16, 'sine', .035, 1000); renderShop(); updateHUD();
+    $('armory-done').focus({ preventScroll: true });
+  });
+}
+function openShop() {
+  pausedForShop = game.state === 'playing';
+  if (pausedForShop) { game.pause(); renderState(); }
+  $('shop-feedback').textContent = ''; renderShop(); $('armory').showModal();
+}
+$('shop-button').onclick = openShop;
+$('close-armory').onclick = $('armory-done').onclick = () => $('armory').close();
+$('armory').addEventListener('close', () => {
+  if (pausedForShop && game.state === 'paused') { game.pause(); renderState(); }
+  pausedForShop = false;
+});
 function startGame() { initAudio(); game.start(); renderState(); canvas.focus({ preventScroll: true }); updateHUD(); }
 function returnMenu() { storeBest(); game.reset(game.difficulty); renderState(); updateHUD(); $('start-button').focus({ preventScroll: true }); }
 $('start-button').onclick = startGame;
@@ -237,7 +282,7 @@ $('manual-button').onclick = openManual;
 $('close-manual').onclick = $('manual-done').onclick = () => $('manual').close();
 $('manual').addEventListener('close', () => { if (pausedForManual && game.state === 'paused') { game.pause(); renderState(); canvas.focus({ preventScroll: true }); } pausedForManual = false; });
 window.addEventListener('keydown', e => {
-  if ($('manual').open) return;
+  if ($('manual').open || $('armory').open) return;
   const key = e.key.toLowerCase();
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
   if (e.target.matches('button') && [' ', 'enter'].includes(key)) return;
@@ -268,7 +313,7 @@ function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   game.update(dt, { x: (keys.has('d') || keys.has('arrowright') ? 1 : 0) - (keys.has('a') || keys.has('arrowleft') ? 1 : 0) + joystick.x, y: (keys.has('s') || keys.has('arrowdown') ? 1 : 0) - (keys.has('w') || keys.has('arrowup') ? 1 : 0) + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
   for (const e of game.events.splice(0)) {
-    if (e.type === 'shot') tone(140, .085, 'sawtooth', .045, 38);
+    if (e.type === 'shot') tone(e.weapon === 'shotgun' ? 95 : e.weapon === 'rifle' ? 180 : 140, e.weapon === 'shotgun' ? .16 : .085, 'sawtooth', .045, 38);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') tone(250, .06, 'square', .015, 160);
