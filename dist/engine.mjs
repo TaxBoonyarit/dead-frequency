@@ -14,7 +14,7 @@ export const BOSSES = [
   ['THE WARDEN', 'slam'], ['RED HOUND', 'charge'], ['ACID MOTHER', 'acid'],
   ['IRON GRAVEDIGGER', 'slam'], ['NIGHT STALKER', 'charge'], ['PLAGUE HERALD', 'acid'],
   ['BONE COLOSSUS', 'slam'], ['BLOOD REAPER', 'charge'], ['THE CONTAMINATED', 'acid'], ['PATIENT ZERO', 'slam'],
-].map(([name, ability], i) => ({ name, ability, hp: 300 + i * 100, reward: 60 + i * 15, attacks: i < 3 ? [ability] : i === 9 ? ['slam', 'charge', 'acid'] : [ability, ['charge', 'acid', 'slam'][i % 3]] }));
+].map(([name, ability], i) => ({ name, ability, bossLook: i, hp: 300 + i * 100, reward: 60 + i * 15, attacks: i < 3 ? [ability] : i === 9 ? ['slam', 'charge', 'acid'] : [ability, ['charge', 'acid', 'slam'][i % 3]] }));
 export const OBSTACLES = [
   { x: 95, y: 95, w: 245, h: 170, kind: 'building', label: 'WAREHOUSE 04' },
   { x: 920, y: 85, w: 255, h: 185, kind: 'building', label: 'NO ENTRY' },

@@ -1,5 +1,5 @@
-import { Game, W, H, OBSTACLES, WEAPONS } from './engine.mjs';
-import { drawZombie } from './zombie-art.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS, BOSSES } from './engine.mjs';
+import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { controlKey, keyboardMovement } from './input.mjs';
 import { HorrorAudio } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
@@ -98,6 +98,19 @@ for (const [i, type] of ['walker', 'runner', 'brute', 'boss'].entries()) {
   enemyCtx.save(); enemyCtx.translate(100 + i * 200, 92); enemyCtx.scale(type === 'boss' ? 1.65 : 2.2, type === 'boss' ? 1.65 : 2.2);
   drawZombie(enemyCtx, { x: 0, y: 0, angle: -.8, type, phase: i * 1.4, stage: type === 'boss' ? 2 : 1 }); enemyCtx.restore();
 }
+const bossGallery = $('boss-gallery');
+BOSSES.forEach((boss, index) => {
+  const card = document.createElement('figure'); card.className = 'boss-portrait';
+  const image = document.createElement('canvas'); image.width = 360; image.height = 220;
+  image.setAttribute('aria-label', `ด่าน ${index + 1} ${boss.name}`);
+  const caption = document.createElement('figcaption');
+  const name = document.createElement('strong'); name.textContent = `${String(index+1).padStart(2,'0')} / ${boss.name}`;
+  const description = document.createElement('span'); description.textContent = BOSS_PORTRAITS[index][1];
+  caption.append(name, description); card.append(image, caption); bossGallery.append(card);
+  const art = image.getContext('2d'); art.fillStyle = '#14191a'; art.fillRect(0, 0, 360, 220);
+  art.save(); art.translate(180,110); art.scale(1.45,1.45);
+  drawZombie(art, {...boss, type:'boss', x:0, y:0, angle:-.5, phase:index*.7, stage:index===9?3:2}); art.restore();
+});
 function drawBody(e, isPlayer = false) {
   if (!isPlayer) {
     drawZombie(ctx, e, game.time);
