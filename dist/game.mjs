@@ -1,5 +1,6 @@
 import { Game, W, H, OBSTACLES, WEAPONS, BOSSES } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
+import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement } from './input.mjs';
 import { HorrorAudio } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
@@ -23,10 +24,13 @@ function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 214748
 function rect(c, x, y, w, h, color) { c.fillStyle = color; c.fillRect(x, y, w, h); }
 function circle(c, x, y, r, color) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
 function line(c, points, color, width = 1) { c.strokeStyle = color; c.lineWidth = width; c.beginPath(); points.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }
-function paintGround() {
-  rect(bg, 0, 0, W, H, '#282e24');
-  rect(bg, 370, 0, 535, H, '#30372c');
-  rect(bg, 0, 320, W, 170, '#30372b');
+let activeScene = sceneForWave(1);
+function paintGround(scene = activeScene, target = bg) {
+  const bg = target; seed = 17;
+
+  rect(bg, 0, 0, W, H, scene.ground);
+  rect(bg, 370, 0, 535, H, scene.road);
+  rect(bg, 0, 320, W, 170, scene.road);
   for (let i = 0; i < 12500; i++) { const v = rand(); rect(bg, rand() * W, rand() * H, 1 + rand() * 3, 1 + rand() * 2, v > .5 ? '#8991760a' : '#090e0b22'); }
   for (let x = 15; x < W; x += 65) for (let y = 20; y < H; y += 60) line(bg, [[x, y], [x + 65, y + 1], [x + 69, y + 60]], '#161f1822');
   // Broken lane markings and faded parking bays.
@@ -47,11 +51,12 @@ function paintGround() {
     line(bg, [[x, y], [x + 7, y - 4], [x + 13, y + 1], [x + 19, y - 5]], '#0b130f55', 1);
     if (i % 3 === 0) { bg.save(); bg.translate(x, y); bg.rotate(rand() * 6); rect(bg, 0, 0, 5 + rand() * 5, 4, '#a8ab8b55'); bg.restore(); }
   }
+  sceneFloor(bg, scene, W, H);
   for (const o of OBSTACLES) {
     rect(bg, o.x + 12, o.y + 16, o.w + 8, o.h + 7, '#060d0b66');
     if (o.kind === 'building') {
       rect(bg, o.x - 4, o.y - 4, o.w + 8, o.h + 8, '#121c17');
-      rect(bg, o.x, o.y, o.w, o.h, '#434b38');
+      rect(bg, o.x, o.y, o.w, o.h, scene.roof);
       rect(bg, o.x + 9, o.y + 9, o.w - 18, o.h - 18, '#353f30');
       rect(bg, o.x + 11, o.y + 11, o.w - 22, 3, '#69715455');
       for (let y = o.y + 25; y < o.y + o.h - 10; y += 22) line(bg, [[o.x + 10, y], [o.x + o.w - 10, y]], '#171f1955');
@@ -60,7 +65,7 @@ function paintGround() {
         rect(bg, x + 3, o.y + 28, 26, 41, '#3c4939');
         for (let k = 0; k < 6; k++) rect(bg, x + 5, o.y + 31 + k * 6, 22, 2, '#202d22');
       }
-      bg.font = '9px monospace'; bg.fillStyle = '#a3b28a66'; bg.fillText(o.label, o.x + 18, o.y + o.h - 23);
+      bg.font = '9px monospace'; bg.fillStyle = '#a3b28a66'; bg.fillText(`${scene.name} / ${o.label}`,  o.x + 18, o.y + o.h - 23);
       rect(bg, o.x + o.w - 48, o.y + o.h - 50, 30, 32, '#252f24');
       circle(bg, o.x + o.w - 33, o.y + o.h - 34, 10, '#46513a');
       line(bg, [[o.x + o.w - 40, o.y + o.h - 41], [o.x + o.w - 26, o.y + o.h - 27]], '#1d2a20', 3);
@@ -77,13 +82,14 @@ function paintGround() {
       for (let x = o.x + 4; x < o.x + o.w - 4; x += 18) { rect(bg, x, o.y + 3, 14, 10, '#727653'); rect(bg, x + 4, o.y + 15, 12, 9, '#404d35'); }
     }
   }
+  sceneStructures(bg, scene, OBSTACLES);
   // Wire fence and pools of sodium light.
   for (const [x, y, length] of [[30, 44, 310], [938, 760, 290]]) {
     line(bg, [[x, y], [x + length, y]], '#7b8c6066', 2);
     for (let s = 0; s <= length; s += 20) { line(bg, [[x + s, y - 9], [x + s, y + 9]], '#6d7f5155'); circle(bg, x + s, y, 2, '#9bab7666'); }
   }
   for (const [x, y] of [[360, 300], [910, 500], [53, 530]]) {
-    const light = bg.createRadialGradient(x, y, 0, x, y, 130); light.addColorStop(0, '#c9bb5330'); light.addColorStop(1, '#c9bb5300'); bg.fillStyle = light; bg.fillRect(x - 130, y - 130, 260, 260);
+    const light = bg.createRadialGradient(x, y, 0, x, y, 130); light.addColorStop(0, scene.accent+'30'); light.addColorStop(1, scene.accent+'00'); bg.fillStyle = light; bg.fillRect(x - 130, y - 130, 260, 260);
     line(bg, [[x + 17, y + 20], [x, y]], '#0c160e88', 5); circle(bg, x, y, 5, '#b2bd70'); circle(bg, x, y, 2, '#edf0b2');
   }
   // Blood stains are deliberately abstract and subdued.
@@ -98,6 +104,12 @@ for (const [i, type] of ['walker', 'runner', 'brute', 'boss'].entries()) {
   enemyCtx.save(); enemyCtx.translate(100 + i * 200, 92); enemyCtx.scale(type === 'boss' ? 1.65 : 2.2, type === 'boss' ? 1.65 : 2.2);
   drawZombie(enemyCtx, { x: 0, y: 0, angle: -.8, type, phase: i * 1.4, stage: type === 'boss' ? 2 : 1 }); enemyCtx.restore();
 }
+SCENES.forEach((scene, index) => {
+  const figure=document.createElement('figure'), image=document.createElement('canvas'), caption=document.createElement('figcaption');
+  figure.className='scene-card'; image.width=320; image.height=200; image.setAttribute('aria-label', `ด่าน ${index+1} ${scene.th}`);
+  const map=image.getContext('2d'); map.scale(.25,.25); paintGround(scene,map);
+  caption.textContent=`${String(index+1).padStart(2,'0')} / ${scene.th}`; figure.append(image,caption); $('scene-gallery').append(figure);
+});
 const bossGallery = $('boss-gallery');
 BOSSES.forEach((boss, index) => {
   const card = document.createElement('figure'); card.className = 'boss-portrait';
@@ -138,6 +150,8 @@ function drawBody(e, isPlayer = false) {
 }
 const demo = [{x:431,y:230,angle:1.1},{x:800,y:160,angle:1.8},{x:891,y:448,angle:3.2},{x:384,y:616,angle:-.8},{x:1040,y:380,angle:3.1},{x:655,y:708,angle:-1.4}].map(e => ({...e,hp:65,maxHp:65,type:'walker',phase:0}));
 function render(now) {
+  const nextScene = sceneForWave(game.wave);
+  if (nextScene !== activeScene) { activeScene = nextScene; paintGround(); $('scene-label').textContent = activeScene.name; }
   const p = game.player;
   cameraX = cameraOffset(p.x, viewWidth);
   ctx.clearRect(0, 0, canvas.width, H); rect(ctx, 0, 0, canvas.width, H, '#1c251b');
@@ -174,8 +188,7 @@ function render(now) {
   }
   for (const b of game.bullets) line(ctx, [[b.x - b.vx * .017, b.y - b.vy * .017], [b.x, b.y]], '#f5dfa2', 2);
   for (const a of game.particles) { ctx.globalAlpha = Math.min(1, a.life * 4); circle(ctx, a.x, a.y, 2, a.color); } ctx.globalAlpha = 1;
-  // Slow drifting ash.
-  for (let i = 0; i < 26; i++) { const x = (i * 113.7 + now * .009) % W, y = (i * 71.3 + now * .012) % H; circle(ctx, x, y, i % 3 === 0 ? 1.6 : .8, '#bcc89c33'); }
+  sceneWeather(ctx, activeScene, now, W, H);
   ctx.restore();
   const vignette = ctx.createRadialGradient(viewWidth / 2, H * .48, H * .2, viewWidth / 2, H * .5, Math.max(viewWidth, H) * .7);
   vignette.addColorStop(0, '#00000000'); vignette.addColorStop(1, '#071009b3'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, viewWidth, H);
@@ -371,7 +384,7 @@ function frame(now) {
     if (e.type === 'bossIncoming') { game.banner = 3; $('wave-banner').innerHTML = 'BOSS INCOMING<small>บอสกำลังมา · เตรียมอาวุธ</small>'; }
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
     if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossWarning(); }
-    if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${e.wave === 10 ? 'FINAL TRANSMISSION' : 'THEY HEARD YOU.'}</small>`; tone(180, .6, 'sine', .05, 120); }
+    if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave).th}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
