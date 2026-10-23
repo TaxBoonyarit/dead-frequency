@@ -115,7 +115,7 @@ export class Game {
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
-    this.choices = [];
+    this.choices = []; this.clearClock = null;
   }
   emit(type, data = {}) { this.events.push({ type, ...data }); }
   weaponStats(id) {
@@ -141,6 +141,7 @@ export class Game {
   start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
   nextWave() {
     this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
+    this.clearClock = null; this.bullets = [];
     this.spawnClock = .3; this.banner = 3; this.bossWarned = false;
     this.emit('wave', { wave: this.wave });
   }
@@ -148,7 +149,7 @@ export class Game {
   reload() {
     const g = this.gun;
     if (this.state !== 'playing' || g.reload > 0 || g.ammo === g.mag || g.reserve <= 0) return;
-    g.reload = g.reloadTime; this.emit('reload');
+    g.reload = g.reloadTime; this.emit('reload', { weapon: this.weaponId });
   }
   upgrade(id) {
     if (this.state !== 'upgrade' || !this.choices.some(c => c.id === id)) return;
@@ -166,7 +167,7 @@ export class Game {
   }
   shoot() {
     const g = this.gun, p = this.player;
-    if (this.state !== 'playing' || g.cooldown > 0 || g.reload > 0) return;
+    if (this.state !== 'playing' || this.clearClock > 0 || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     for (let i = 0; i < g.pellets; i++) {
       const spread = g.pellets === 1 ? (this.random() - .5) * g.spread : (i / (g.pellets - 1) - .5) * g.spread + (this.random() - .5) * .015;
@@ -255,7 +256,7 @@ export class Game {
     p.invulnerable = Math.max(0, p.invulnerable - dt); g.cooldown = Math.max(0, g.cooldown - dt);
     if (g.reload > 0) {
       g.reload = Math.max(0, g.reload - dt);
-      if (g.reload === 0) { const n = Math.min(g.mag - g.ammo, g.reserve); g.ammo += n; g.reserve -= n; this.emit('loaded'); }
+      if (g.reload === 0) { const n = Math.min(g.mag - g.ammo, g.reserve); g.ammo += n; g.reserve -= n; this.emit('loaded', { weapon: this.weaponId }); }
     }
     let dx = input.x || 0, dy = input.y || 0; const length = Math.hypot(dx, dy);
     if (length > 1) { dx /= length; dy /= length; }
@@ -344,6 +345,9 @@ export class Game {
     for (const a of this.particles) { a.x += a.vx * dt; a.y += a.vy * dt; a.life -= dt; }
     this.particles = this.particles.filter(a => a.life > 0);
     if (this.remaining === 0 && this.enemies.length === 0) {
+      if (this.clearClock === null) { this.clearClock = 3; this.banner = 3; this.emit('waveCleared'); return; }
+      this.clearClock = Math.max(0, this.clearClock - dt);
+      if (this.clearClock > 0) return;
       if (this.wave >= 10) { this.state = 'won'; this.score += 5000; this.emit('won'); }
       else {
         this.state = 'upgrade';

@@ -288,8 +288,9 @@ function renderShop() {
     const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
     const disabled = !canTrade || equipped || (!owned && game.credits < w.price);
     const action = equipped ? 'กำลังใช้งาน' : owned ? 'สลับมาใช้' : !canTrade ? `ซื้อหลังจบระลอก · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
-    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะประชิด · ต้องเข้าหาเป้าหมาย' : w.range > 1.2 ? 'ระยะไกล · เล็งเป้าหมายสำคัญ' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}">▶ ลองเสียงปืน</button><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
+    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะประชิด · ต้องเข้าหาเป้าหมาย' : w.range > 1.2 ? 'ระยะไกล · เล็งเป้าหมายสำคัญ' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}">▶ ลองเสียงปืน</button><button class="sound-preview reload-preview" data-reload-preview="${w.id}" aria-label="ลองเสียงรีโหลด ${w.name}">↻ ลองเสียงรีโหลด</button><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
   }).join('');
+  $('weapon-grid').querySelectorAll('[data-reload-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.reloadPreview, false, true));
   $('weapon-grid').querySelectorAll('[data-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.preview));
   $('weapon-grid').querySelectorAll('[data-weapon]').forEach(button => button.onclick = () => {
     const id = button.dataset.weapon, owned = game.ownedWeapons.has(id);
@@ -305,7 +306,7 @@ function openShop() {
   if (pausedForShop) { game.pause(); renderState(); }
   $('shop-feedback').textContent = ''; renderShop(); $('armory').showModal();
 }
-async function previewSound(id, zombie = false) {
+async function previewSound(id, zombie = false, reload = false) {
   const request = ++previewRequest;
   soundEnabled = true; initAudio();
   $('sound-button').textContent = 'SOUND ON'; $('sound-button').setAttribute('aria-label', 'ปิดเสียงเกม');
@@ -314,7 +315,8 @@ async function previewSound(id, zombie = false) {
   if (!zombie) await soundscape.loadWeaponAudio();
   if (request !== previewRequest || !$('armory').open || !soundEnabled) return;
   soundscape.stopVoices();
-  if (zombie) { soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = `กำลังลองเสียงซอมบี้ · ${id}`; }
+  if (reload) { const duration = game.weaponStats(id).reloadTime; [0,.4,.78].forEach((part, step) => soundscape.reloadEffect(id, step, duration * part)); $('shop-feedback').textContent = 'กำลังลองเสียงรีโหลด · ถอด / เติม / ขึ้นลำ'; }
+  else if (zombie) { soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = `กำลังลองเสียงซอมบี้ · ${id}`; }
   else { const recorded = soundscape.gunshot(id); $('shop-feedback').textContent = recorded ? 'กำลังลองเสียงปืนจากเสียงบันทึกจริง' : 'โหลดเสียงบันทึกไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
 }
 document.querySelectorAll('[data-zombie-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.zombiePreview, true));
@@ -379,17 +381,18 @@ function frame(now) {
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
-    if (e.type === 'reload') tone(250, .06, 'square', .015, 160);
-    if (e.type === 'loaded') tone(450, .07, 'square', .015, 550);
+    if (e.type === 'reload') { soundscape?.reloadEffect(e.weapon, 0); if (soundscape) soundscape.reloadStep = 0; }
+    if (e.type === 'loaded') tone(620, .04, 'triangle', .015, 310);
+    if (e.type === 'waveCleared') { $('wave-banner').innerHTML = 'AREA SECURED<small>พื้นที่ปลอดภัย · เดินเก็บเสบียงก่อนขึ้นหน้าถัดไป</small>'; }
     if (e.type === 'bossIncoming') { game.banner = 3; $('wave-banner').innerHTML = 'BOSS INCOMING<small>บอสกำลังมา · เตรียมอาวุธ</small>'; }
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
     if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossWarning(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave).th}</small>`; tone(180, .6, 'sine', .05, 120); }
-    if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); tone(550, .15, 'sine', .04, 900); }
+    if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
   }
-  soundscape?.update({ playing: game.state === 'playing' && !document.hidden, health: game.player.hp / game.player.maxHp, boss: game.enemies.some(e => e.type === 'boss'), wave: game.wave, enemies: game.enemies, player: game.player });
+  soundscape?.update({ playing: game.state === 'playing' && !document.hidden, health: game.player.hp / game.player.maxHp, boss: game.enemies.some(e => e.type === 'boss'), wave: game.wave, weapon: game.weaponId, reload: game.gun.reload, reloadTime: game.gun.reloadTime, enemies: game.enemies, player: game.player });
   renderState(); render(now);
   if (now - lastHud > 80) { updateHUD(); lastHud = now; }
   requestAnimationFrame(frame);

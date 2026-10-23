@@ -6,7 +6,7 @@ test('completing waves advances through all ten environments and restart restore
   const g=new Game(()=>.5);g.start();const visited=[];
   for(let wave=1;wave<=10;wave++){
     assert.equal(g.wave,wave);visited.push(sceneForWave(g.wave));
-    g.remaining=0;g.enemies=[];g.update(.01);
+    g.remaining=0;g.enemies=[];for(let i=0;i<62;i++)g.update(.05);
     if(wave<10)g.upgrade(g.choices[0].id);
   }
   assert.equal(new Set(visited.map(s=>s.name)).size,10);assert.equal(visited[9].kind,'nest');

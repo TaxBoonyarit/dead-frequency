@@ -34,14 +34,14 @@ test('reload transfers only available reserve and cannot shoot during reload', (
   g.reload(); assert.equal(g.gun.reload, 0);
 });
 test('a completed wave offers valid upgrades and replenishes supplies', () => {
-  const g = running(); g.remaining = 0; g.update(.01);
+  const g = running(); g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
   assert.equal(g.state, 'upgrade'); assert.equal(g.choices.length, 3); assert.equal(new Set(g.choices.map(u => u.id)).size, 3);
   const wave = g.wave; g.upgrade('invalid'); assert.equal(g.state, 'upgrade');
   g.player.hp = 35; const reserve = g.gun.reserve; g.upgrade(g.choices[0].id);
   assert.equal(g.state, 'playing'); assert.equal(g.wave, wave + 1); assert.equal(g.gun.reserve, reserve + 36); assert.ok(g.player.hp >= 55);
 });
 test('wave ten ends with evacuation, and restart clears the run', () => {
-  const g = running(); g.wave = 10; g.remaining = 0; g.update(.01);
+  const g = running(); g.wave = 10; g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
   assert.equal(g.state, 'won'); assert.equal(g.score, 5000);
   g.start(); assert.equal(g.wave, 1); assert.equal(g.score, 0); assert.equal(g.kills, 0); assert.equal(g.player.hp, 100);
 });
@@ -113,4 +113,17 @@ test('brutes can attack a player standing closer to a wall than their radius', (
   const e = { ...enemy(400, 400), r: 21, speed: 65, type: 'brute' }; g.enemies = [e];
   for (let i = 0; i < 1200 && g.player.hp === 100; i++) g.update(1 / 60);
   assert.ok(g.player.hp < 100); assert.equal(blocked(e.x, e.y, e.r), false);
+});
+
+test('wave clear leaves three seconds to collect supplies and pauses its countdown', () => {
+  const g=running();g.remaining=0;g.player.hp=50;g.update(.01);
+  assert.equal(g.state,'playing');assert.equal(g.clearClock,3);
+  assert.equal(g.events.filter(e=>e.type==='waveCleared').length,1);
+  const ammo=g.gun.ammo;g.shoot();assert.equal(g.gun.ammo,ammo);
+  const start=g.player.x;g.drops=[{x:start+25,y:g.player.y,type:'ammo',life:20}];const reserve=g.gun.reserve;
+  g.update(.05,{x:1});assert.ok(g.player.x>start);assert.equal(g.gun.reserve,reserve+30);
+  const clock=g.clearClock;g.pause();g.update(.05);assert.equal(g.clearClock,clock);g.pause();
+  tick(g,2);assert.equal(g.state,'playing');tick(g,1.1);assert.equal(g.state,'upgrade');
+  assert.equal(g.events.filter(e=>e.type==='waveCleared').length,1);
+  g.upgrade(g.choices[0].id);assert.equal(g.clearClock,null);
 });

@@ -15,6 +15,7 @@ test('every wave ends with exactly one correctly scaled boss and waits for its d
     g.player.x = b.x; g.player.y = b.y + 35; g.player.angle = -Math.PI / 2; b.hp = 1;
     g.update(.05, { fire: true });
     assert.equal(g.kills, 1); assert.equal(g.credits, b.reward);
+    assert.equal(g.state, 'playing'); for(let i=0;i<62;i++)g.update(.05);
     assert.equal(g.state, wave === 10 ? 'won' : 'upgrade');
   }
 });

@@ -71,8 +71,19 @@ test('failed sample loads retry without redownloading successful samples', async
   globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,3);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,4);
-    assert.equal([...counts.values()].reduce((a,b)=>a+b),5);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,6);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,7);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),8);
   } finally {globalThis.fetch=originalFetch;}
+});
+
+test('reload stages follow game progress once each and reset after loading', () => {
+  const c=context(),a=new HorrorAudio(c);a.setEnabled(true);
+  for(const id of ['reload-out','reload-in','reload-bolt'])a.gunBuffers.set(id,{duration:.2});
+  a.reloadProgress('pistol',1.4,1.4);assert.equal(a.voices.size,1);
+  for(let i=0;i<10;i++)a.reloadProgress('pistol',1.3,1.4);assert.equal(a.voices.size,1);
+  a.reloadProgress('pistol',.7,1.4);assert.equal(a.voices.size,2);
+  a.reloadProgress('pistol',.2,1.4);assert.equal(a.voices.size,3);
+  a.reloadProgress('pistol',0,1.4);assert.equal(a.reloadStep,-1);
+  a.setEnabled(false);assert.equal(a.voices.size,0);
 });

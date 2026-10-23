@@ -9,7 +9,7 @@ export class HorrorAudio {
     this.context = context; this.master = context.createGain();
     this.master.gain.value = 0; this.master.connect(context.destination);
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
-    this.gunBuffers = new Map(); this.gunLoading = null;
+    this.reloadStep = -1; this.gunBuffers = new Map(); this.gunLoading = null;
     this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
@@ -37,7 +37,7 @@ export class HorrorAudio {
   }
   loadWeaponAudio() {
     if (this.gunLoading) return this.gunLoading;
-    this.gunLoading = Promise.allSettled(['pistol', 'shotgun', 'rifle', 'assault'].filter(id => !this.gunBuffers.has(id)).map(async id => {
+    this.gunLoading = Promise.allSettled(['pistol', 'shotgun', 'rifle', 'assault', 'reload-out', 'reload-in', 'reload-bolt'].filter(id => !this.gunBuffers.has(id)).map(async id => {
       const response = await fetch(new URL(`./audio/${id}.wav`, import.meta.url));
       if (!response.ok) throw new Error('Audio unavailable');
       const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
@@ -57,6 +57,23 @@ export class HorrorAudio {
     osc.onended = () => { osc.disconnect(); gain.disconnect(); this.voices.delete(voice); };
     osc.start(); osc.stop(c.currentTime + buffer.duration / osc.playbackRate.value);
     return true;
+  }
+  reloadEffect(id, step, delay = 0) {
+    if (!this.enabled) return false;
+    const key = step === 0 ? 'reload-out' : step === 1 ? 'reload-in' : 'reload-bolt';
+    const buffer = this.gunBuffers.get(key), c = this.context;
+    const rate = id === 'lmg' ? .75 : id === 'shotgun' || id === 'revolver' ? .9 : id === 'sniper' ? .8 : 1.15;
+    if (!buffer) { this.tone(step === 0 ? 160 : 310, .08, 'triangle', .035, 90, delay); return false; }
+    const osc = c.createBufferSource(), gain = c.createGain(); osc.buffer = buffer; osc.playbackRate.value = rate;
+    gain.gain.value = .4; osc.connect(gain); gain.connect(this.master);
+    const voice = {osc,gain}; this.voices.add(voice);
+    osc.onended = () => {osc.disconnect();gain.disconnect();this.voices.delete(voice);};
+    osc.start(c.currentTime + delay); osc.stop(c.currentTime + delay + buffer.duration / rate); return true;
+  }
+  reloadProgress(id, remaining, duration) {
+    if (remaining <= 0) { this.reloadStep = -1; return; }
+    const progress = 1 - remaining / duration, step = progress >= .78 ? 2 : progress >= .4 ? 1 : 0;
+    if (step > this.reloadStep) { this.reloadStep = step; this.reloadEffect(id, step); }
   }
   stopVoices() {
     for (const { osc, gain, extras = [] } of this.voices) { osc.onended = null; osc.stop(); osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); }
@@ -109,12 +126,13 @@ export class HorrorAudio {
     this.sources.forEach(n => { n.stop(); n.disconnect(); }); this.nodes.forEach(n => n.disconnect());
     this.sources = []; this.nodes = []; this.droneGain = null;
   }
-  update({ playing, health, boss, wave, enemies = [], player }) {
+  update({ playing, health, boss, wave, enemies = [], player, weapon, reload = 0, reloadTime = 1 }) {
     if (!this.enabled || !playing) {
       if (this.sources.length) { this.stopAmbience(); this.stopVoices(); }
       return;
     }
     this.startAmbience();
+    this.reloadProgress(weapon, reload, reloadTime);
     const t = this.context.currentTime, danger = health <= .3;
     this.droneGain.gain.setTargetAtTime(boss ? .032 : .018 + wave * .0005, t, .5);
     if (t >= this.nextPulse) {

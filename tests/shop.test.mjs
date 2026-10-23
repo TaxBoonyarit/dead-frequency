@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Game, WEAPONS } from '../dist/engine.mjs';
 
 function shop(credits = 90) {
-  const g = new Game(() => .5); g.start(); g.remaining = 0; g.update(.01);
+  const g = new Game(() => .5); g.start(); g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
   g.credits = credits; return g;
 }
 function target(g, type = 'walker', hp = 10) {
