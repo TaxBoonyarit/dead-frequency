@@ -81,3 +81,7 @@ Every wave selects its own scene: quarantine block, red alley, abandoned hospita
 Reloads now use CC0 handling recordings by BMacZero: extraction, insertion and chamber handling follow reload progress, so pausing freezes the sequence and reload-speed upgrades adjust its timing. Each weapon card includes a reload preview. Ammo pickups also play an insertion sound.
 
 After the final enemy dies, the arena stays active for three seconds with AREA SECURED. Players can move, collect supplies and reload before the upgrade/result screen; holding fire does not waste ammunition during this interval. Pausing freezes the delay.
+
+## Interface refinements
+
+The armory prioritizes purchase/equip actions, groups audio previews as secondary controls, and keeps balance and return navigation visible while scrolling. Filters show all, affordable unowned, or owned weapons, with a clear empty state. Zombie previews are collapsible. Active runs collapse the introduction to give the game more screen space, use larger touch targets, and display credits on the shop shortcut. Keyboard Space/Enter retain native button activation; toggling sound returns focus to the game. Health uses a labeled progressbar with current/max values.

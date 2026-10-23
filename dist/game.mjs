@@ -11,7 +11,7 @@ const coarse = matchMedia('(pointer:coarse)').matches;
 const keys = new Set();
 let firing = false, pointer = null, joystick = { x: 0, y: 0 }, viewWidth = W, cameraX = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false, previewRequest = 0;
+let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -223,6 +223,8 @@ function storeBest() {
 function timeText(seconds) { const t = Math.floor(seconds); return [Math.floor(t / 3600), Math.floor(t / 60) % 60, t % 60].map(n => String(n).padStart(2, '0')).join(':'); }
 function updateHUD() {
   const p = game.player, g = game.gun;
+  $('health-meter').setAttribute('aria-valuenow', String(Math.ceil(p.hp))); $('health-meter').setAttribute('aria-valuemax', String(p.maxHp));
+  $('shop-button').textContent = game.state === 'menu' ? 'ร้านปืน' : `ร้าน · ${game.credits} CR`;
   $('health-label').textContent = Math.ceil(p.hp); $('health-bar').style.width = `${p.hp / p.maxHp * 100}%`; $('health-bar').style.background = p.hp < 30 ? '#d98d67' : '';
   $('stamina-bar').style.width = `${p.stamina}%`;
   $('threat-count').textContent = `เหลือ ${game.remaining + game.enemies.length} ตัว${game.remaining === 1 ? ' · บอสกำลังมา' : ''}`;
@@ -245,6 +247,7 @@ function updateHUD() {
 function renderState() {
   const s = game.state;
   if (s === lastState) return;
+  document.body.classList.toggle('game-active', s !== 'menu');
   lastState = s; keys.clear(); firing = false; joystick.x = joystick.y = 0; $('joystick-knob').style.transform = '';
   $('menu-overlay').hidden = s !== 'menu';
   $('state-overlay').hidden = ['menu', 'playing'].includes(s);
@@ -282,14 +285,17 @@ function weaponArt(id) {
 function renderShop() {
   const canTrade = game.state === 'upgrade';
   $('shop-balance').textContent = `${game.credits} CR`;
+  $('shop-equipped').textContent = `กำลังใช้ ${WEAPONS.find(w => w.id === game.weaponId).name}`;
+  document.querySelectorAll('[data-shop-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shopFilter === shopFilter)));
+  const visibleWeapons = WEAPONS.filter(w => shopFilter === 'owned' ? game.ownedWeapons.has(w.id) : shopFilter === 'affordable' ? !game.ownedWeapons.has(w.id) && game.credits >= w.price : true);
   $('shop-description').textContent = canTrade ? 'พื้นที่ปลอดภัยแล้ว ซื้อหรือสลับปืนได้ก่อนเริ่มระลอกถัดไป' : 'ดูอาวุธได้ที่นี่ ซื้อและสลับปืนได้หลังจบระลอก · กำจัดซอมบี้รับ 10–30 CR';
-  $('armory-done').firstChild.textContent = canTrade ? 'กลับไปเลือกอัปเกรด ' : 'กลับไปยังเกม ';
-  $('weapon-grid').innerHTML = WEAPONS.map(w => {
+  $('armory-done').firstChild.textContent = canTrade ? 'เลือกอัปเกรดต่อ ' : game.state === 'menu' ? 'กลับหน้าเริ่มต้น ' : 'กลับไปยังเกม ';
+  $('weapon-grid').innerHTML = visibleWeapons.map(w => {
     const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
     const disabled = !canTrade || equipped || (!owned && game.credits < w.price);
     const action = equipped ? 'กำลังใช้งาน' : owned ? 'สลับมาใช้' : !canTrade ? `ซื้อหลังจบระลอก · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
-    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะประชิด · ต้องเข้าหาเป้าหมาย' : w.range > 1.2 ? 'ระยะไกล · เล็งเป้าหมายสำคัญ' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}">▶ ลองเสียงปืน</button><button class="sound-preview reload-preview" data-reload-preview="${w.id}" aria-label="ลองเสียงรีโหลด ${w.name}">↻ ลองเสียงรีโหลด</button><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
-  }).join('');
+    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะประชิด · ต้องเข้าหาเป้าหมาย' : w.range > 1.2 ? 'ระยะไกล · เล็งเป้าหมายสำคัญ' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="weapon-buy" data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button><div class="weapon-sound-actions"><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}">▶ เสียงยิง</button><button class="sound-preview reload-preview" data-reload-preview="${w.id}" aria-label="ลองเสียงรีโหลด ${w.name}">↻ รีโหลด</button></div></article>`;
+  }).join('') || '<p class="shop-empty">เครดิตยังไม่พอซื้อปืนใหม่ กำจัดซอมบี้และบอสเพื่อสะสมเครดิต หรือเลือกดูปืนทั้งหมด</p>';
   $('weapon-grid').querySelectorAll('[data-reload-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.reloadPreview, false, true));
   $('weapon-grid').querySelectorAll('[data-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.preview));
   $('weapon-grid').querySelectorAll('[data-weapon]').forEach(button => button.onclick = () => {
@@ -301,7 +307,9 @@ function renderShop() {
     $('armory-done').focus({ preventScroll: true });
   });
 }
+document.querySelectorAll('[data-shop-filter]').forEach(button => button.onclick = () => { shopFilter = button.dataset.shopFilter; renderShop(); });
 function openShop() {
+  shopFilter = 'all';
   pausedForShop = game.state === 'playing';
   if (pausedForShop) { game.pause(); renderState(); }
   $('shop-feedback').textContent = ''; renderShop(); $('armory').showModal();
@@ -331,7 +339,7 @@ function startGame() { initAudio(); game.start(); renderState(); canvas.focus({ 
 function returnMenu() { storeBest(); game.reset(game.difficulty); renderState(); updateHUD(); $('start-button').focus({ preventScroll: true }); }
 $('start-button').onclick = startGame;
 $('pause-button').onclick = () => { game.pause(); renderState(); };
-$('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); };
+$('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
 $('fullscreen-button').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await viewport.requestFullscreen(); } catch { toast('เบราว์เซอร์นี้ไม่รองรับโหมดเต็มหน้าจอ'); } };
 document.querySelectorAll('[data-difficulty]').forEach(b => {
   b.setAttribute('aria-pressed', String(b.classList.contains('selected')));
@@ -348,8 +356,8 @@ $('manual').addEventListener('close', () => { if (pausedForManual && game.state 
 window.addEventListener('keydown', e => {
   if ($('manual').open || $('armory').open) return;
   const key = controlKey(e);
+  if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
-  if (e.target.matches('button') && [' ', 'enter'].includes(key)) return;
   if (!e.repeat && (key === 'escape' || key === 'p')) { game.pause(); renderState(); return; }
   if (key === 'r') game.reload();
   if (key === ' ' && !e.repeat) game.shoot();
