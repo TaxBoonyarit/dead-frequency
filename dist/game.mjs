@@ -1,4 +1,5 @@
 import { Game, W, H, OBSTACLES, WEAPONS } from './engine.mjs';
+import { HorrorAudio } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
@@ -7,7 +8,7 @@ const coarse = matchMedia('(pointer:coarse)').matches;
 const keys = new Set();
 let firing = false, pointer = null, joystick = { x: 0, y: 0 }, viewWidth = W, cameraX = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, joystickId = null, pausedForManual = false, pausedForShop = false;
+let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false;
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -175,14 +176,15 @@ function resize() {
   canvas.width = viewWidth; canvas.height = H;
 }
 new ResizeObserver(resize).observe(viewport); resize();
-function initAudio() { try { audio ||= new (window.AudioContext || window.webkitAudioContext)(); audio.resume().catch(() => {}); } catch {} }
-function tone(frequency, duration, type = 'sine', volume = .035, endFrequency = frequency) {
-  if (!soundEnabled || !audio) return;
-  const osc = audio.createOscillator(), gain = audio.createGain(); osc.type = type;
-  osc.frequency.setValueAtTime(frequency, audio.currentTime); osc.frequency.exponentialRampToValueAtTime(Math.max(1, endFrequency), audio.currentTime + duration);
-  gain.gain.setValueAtTime(volume, audio.currentTime); gain.gain.exponentialRampToValueAtTime(.001, audio.currentTime + duration);
-  osc.connect(gain); gain.connect(audio.destination); osc.start(); osc.stop(audio.currentTime + duration);
+function initAudio() {
+  try {
+    audio ||= new (window.AudioContext || window.webkitAudioContext)();
+    soundscape ||= new HorrorAudio(audio); soundscape.setEnabled(soundEnabled);
+    audio.resume().catch(() => {});
+  } catch {}
 }
+function tone(...args) { soundscape?.tone(...args); }
+
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 2000); }
 function storeBest() {
   if (game.score > best) { best = game.score; try { localStorage.setItem('dead-frequency-best', String(best)); } catch {} }
@@ -307,8 +309,8 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
 function releaseInput() { keys.clear(); firing = false; joystick = { x: 0, y: 0 }; $('joystick-knob').style.transform = ''; }
-window.addEventListener('blur', () => { releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
-document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { releaseInput(); game.pause(); renderState(); } });
+window.addEventListener('blur', () => { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
+document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); game.pause(); renderState(); } });
 function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
 function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth)); }
 canvas.addEventListener('pointermove', setPointer);
@@ -332,12 +334,13 @@ function frame(now) {
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') tone(250, .06, 'square', .015, 160);
     if (e.type === 'loaded') tone(450, .07, 'square', .015, 550);
-    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; tone(90, .7, 'sawtooth', .05, 55); }
+    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossWarning(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${e.wave === 10 ? 'FINAL TRANSMISSION' : 'THEY HEARD YOU.'}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
   }
+  soundscape?.update({ playing: game.state === 'playing' && !document.hidden, health: game.player.hp / game.player.maxHp, boss: game.enemies.some(e => e.type === 'boss'), wave: game.wave });
   renderState(); render(now);
   if (now - lastHud > 80) { updateHUD(); lastHud = now; }
   requestAnimationFrame(frame);
