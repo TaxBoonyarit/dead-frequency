@@ -1,9 +1,15 @@
+export const GUN_AUDIO = {
+  pistol: ['pistol', 1, .25], smg: ['pistol', 1.22, .17], shotgun: ['shotgun', .9, .34],
+  rifle: ['rifle', 1.08, .28], revolver: ['pistol', .78, .3], assault: ['assault', 1, .23],
+  lmg: ['assault', .82, .25], sniper: ['rifle', .8, .34],
+};
 // Procedural horror score: no downloads, loops, or background timers.
 export class HorrorAudio {
   constructor(context) {
     this.context = context; this.master = context.createGain();
     this.master.gain.value = 0; this.master.connect(context.destination);
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
+    this.gunBuffers = new Map(); this.gunLoading = null;
     this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
@@ -28,6 +34,29 @@ export class HorrorAudio {
     const voice = { osc, gain }; this.voices.add(voice);
     osc.onended = () => { osc.disconnect(); gain.disconnect(); this.voices.delete(voice); };
     osc.start(start); osc.stop(start + duration);
+  }
+  loadWeaponAudio() {
+    if (this.gunLoading) return this.gunLoading;
+    this.gunLoading = Promise.allSettled(['pistol', 'shotgun', 'rifle', 'assault'].filter(id => !this.gunBuffers.has(id)).map(async id => {
+      const response = await fetch(new URL(`./audio/${id}.wav`, import.meta.url));
+      if (!response.ok) throw new Error('Audio unavailable');
+      const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
+      this.gunBuffers.set(id, buffer);
+    })).finally(() => { this.gunLoading = null; });
+    return this.gunLoading;
+  }
+  gunshot(id) {
+    if (!this.enabled) return false;
+    const [sample, rate, volume] = GUN_AUDIO[id] || GUN_AUDIO.pistol;
+    const buffer = this.gunBuffers.get(sample);
+    if (!buffer) { this.tone(95, .12, 'triangle', .06, 32); return false; }
+    const c = this.context, osc = c.createBufferSource(), gain = c.createGain();
+    osc.buffer = buffer; osc.playbackRate.value = rate * (.985 + Math.random() * .03);
+    gain.gain.value = volume; osc.connect(gain); gain.connect(this.master);
+    const voice = { osc, gain }; this.voices.add(voice);
+    osc.onended = () => { osc.disconnect(); gain.disconnect(); this.voices.delete(voice); };
+    osc.start(); osc.stop(c.currentTime + buffer.duration / osc.playbackRate.value);
+    return true;
   }
   stopVoices() {
     for (const { osc, gain, extras = [] } of this.voices) { osc.onended = null; osc.stop(); osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); }

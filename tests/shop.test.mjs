@@ -87,3 +87,14 @@ test('shotgun pellets knock back and stagger without pushing an enemy through a 
   g.shoot(); g.update(.05);
   assert.ok(e.x <= 711, 'barrier at x725 must stop radius14 body');
 });
+
+test('all eight weapons purchase, equip and shoot with finite ballistics and correct ammo', () => {
+  assert.equal(WEAPONS.length,8);
+  const g=shop(2000);
+  for(const w of WEAPONS) {
+    g.state='upgrade'; if(w.price) assert.equal(g.buyWeapon(w.id),true);
+    assert.equal(g.weaponId,w.id); g.state='playing'; g.gun.cooldown=0;
+    const before=g.gun.ammo;g.bullets=[];g.shoot(); assert.equal(g.gun.ammo,before-1);assert.equal(g.bullets.length,w.pellets);
+    assert.ok(g.bullets.every(b=>Number.isFinite(b.vx)&&Number.isFinite(b.vy)&&b.damage===w.damage));
+  }
+});

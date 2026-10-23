@@ -9,7 +9,7 @@ const coarse = matchMedia('(pointer:coarse)').matches;
 const keys = new Set();
 let firing = false, pointer = null, joystick = { x: 0, y: 0 }, viewWidth = W, cameraX = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false;
+let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false, previewRequest = 0;
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -101,7 +101,7 @@ function drawBody(e, isPlayer = false) {
   if (isPlayer) {
     circle(ctx, 0, 0, 12, '#687d52'); rect(ctx, -9, -9, 9, 18, '#364b35');
     circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
-    const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35 })[game.weaponId];
+    const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
     rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
     circle(ctx, 1, 0, 8, '#a1a97b'); circle(ctx, 0, -1, 7, '#6e8158');
     line(ctx, [[-3, -6], [4, -4]], '#bac38c88', 2);
@@ -180,7 +180,7 @@ new ResizeObserver(resize).observe(viewport); resize();
 function initAudio() {
   try {
     audio ||= new (window.AudioContext || window.webkitAudioContext)();
-    soundscape ||= new HorrorAudio(audio); soundscape.setEnabled(soundEnabled);
+    soundscape ||= new HorrorAudio(audio); soundscape.setEnabled(soundEnabled); soundscape.loadWeaponAudio();
     audio.resume().catch(() => {});
   } catch {}
 }
@@ -248,7 +248,7 @@ function weaponArt(id) {
     shotgun: '<path d="M7 35l25-11h51v12H42l-9 18H19l4-13-16 5zM81 24h40v6H81zM81 33h40v5H81zM50 39h37v8H50z"/>',
     rifle: '<path d="M6 28l27-5h50v17H61l-5 22H42l3-22H29l-23 9zM82 26h41v6H82zM56 12h25v7H56zM65 18h5v8h-5z"/>',
   };
-  return `<svg viewBox="0 0 130 80" aria-hidden="true">${shapes[id]}</svg>`;
+  return `<svg viewBox="0 0 130 80" aria-hidden="true">${shapes[({revolver:'pistol',assault:'rifle',lmg:'smg',sniper:'rifle'})[id] || id]}</svg>`;
 }
 function renderShop() {
   const canTrade = game.state === 'upgrade';
@@ -259,8 +259,9 @@ function renderShop() {
     const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
     const disabled = !canTrade || equipped || (!owned && game.credits < w.price);
     const action = equipped ? 'กำลังใช้งาน' : owned ? 'สลับมาใช้' : !canTrade ? `ซื้อหลังจบระลอก · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
-    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
+    return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะประชิด · ต้องเข้าหาเป้าหมาย' : w.range > 1.2 ? 'ระยะไกล · เล็งเป้าหมายสำคัญ' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}">▶ ลองเสียงปืน</button><button data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button></article>`;
   }).join('');
+  $('weapon-grid').querySelectorAll('[data-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.preview));
   $('weapon-grid').querySelectorAll('[data-weapon]').forEach(button => button.onclick = () => {
     const id = button.dataset.weapon, owned = game.ownedWeapons.has(id);
     const success = owned ? game.equipWeapon(id) : game.buyWeapon(id);
@@ -275,9 +276,23 @@ function openShop() {
   if (pausedForShop) { game.pause(); renderState(); }
   $('shop-feedback').textContent = ''; renderShop(); $('armory').showModal();
 }
+async function previewSound(id, zombie = false) {
+  const request = ++previewRequest;
+  soundEnabled = true; initAudio();
+  $('sound-button').textContent = 'SOUND ON'; $('sound-button').setAttribute('aria-label', 'ปิดเสียงเกม');
+  if (!soundscape) { $('shop-feedback').textContent = 'เบราว์เซอร์นี้เปิดเสียงไม่ได้'; return; }
+  await audio.resume().catch(() => {});
+  if (!zombie) await soundscape.loadWeaponAudio();
+  if (request !== previewRequest || !$('armory').open || !soundEnabled) return;
+  soundscape.stopVoices();
+  if (zombie) { soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = `กำลังลองเสียงซอมบี้ · ${id}`; }
+  else { const recorded = soundscape.gunshot(id); $('shop-feedback').textContent = recorded ? 'กำลังลองเสียงปืนจากเสียงบันทึกจริง' : 'โหลดเสียงบันทึกไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
+}
+document.querySelectorAll('[data-zombie-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.zombiePreview, true));
 $('shop-button').onclick = openShop;
 $('close-armory').onclick = $('armory-done').onclick = () => $('armory').close();
 $('armory').addEventListener('close', () => {
+  previewRequest++; soundscape?.stopVoices();
   if (pausedForShop && game.state === 'paused') { game.pause(); renderState(); }
   pausedForShop = false;
 });
@@ -332,7 +347,7 @@ function frame(now) {
   const movement = keyboardMovement(keys);
   game.update(dt, { x: movement.x + joystick.x, y: movement.y + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
   for (const e of game.events.splice(0)) {
-    if (e.type === 'shot') tone(e.weapon === 'shotgun' ? 95 : e.weapon === 'rifle' ? 180 : 140, e.weapon === 'shotgun' ? .16 : .085, 'sawtooth', .045, 38);
+    if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') tone(250, .06, 'square', .015, 160);

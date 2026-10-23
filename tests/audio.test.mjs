@@ -4,7 +4,7 @@ import { HorrorAudio } from '../dist/audio.mjs';
 function context() {
   const param = () => ({ value: 0, cancelScheduledValues() {}, setValueAtTime(v) { this.value = v; }, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { this.peak = v; }, setTargetAtTime(v) { this.value = v; } });
   const nodes = [];
-  const node = () => { const n = { gain: param(), frequency: param(), Q: param(), connect() {}, disconnect() { this.disconnected = true; }, start() { this.started = true; }, stop() { this.stopped = true; } }; nodes.push(n); return n; };
+  const node = () => { const n = { playbackRate: param(), gain: param(), frequency: param(), Q: param(), connect() {}, disconnect() { this.disconnected = true; }, start() { this.started = true; }, stop() { this.stopped = true; } }; nodes.push(n); return n; };
   return { currentTime: 0, sampleRate: 100, destination: {}, nodes, createGain: node, createOscillator: node, createBufferSource: node, createBiquadFilter: node, createBuffer: (_, size) => ({ getChannelData: () => new Float32Array(size) }) };
 }
 const calm = { playing: true, health: 1, boss: false, wave: 1 };
@@ -51,4 +51,28 @@ test('zombie types have distinct lengths, proximity controls volume and mute can
   const voices=[...a.voices]; a.setEnabled(false); assert.equal(a.voices.size,0);
   assert.ok(voices.every(v=>v.osc.stopped && v.extras.every(n=>n.disconnected)));
   a.zombieGrowl('walker',10); assert.equal(a.voices.size,0);
+});
+
+test('recorded gun voices stop on mute and return to the voice pool when ended', () => {
+  const c=context(), a=new HorrorAudio(c); a.setEnabled(true);
+  for(const id of ['pistol','shotgun','rifle','assault']) a.gunBuffers.set(id,{duration:.6});
+  for(const id of ['pistol','smg','shotgun','rifle','revolver','assault','lmg','sniper']) assert.equal(a.gunshot(id),true);
+  assert.equal(a.voices.size,8);
+  const first=[...a.voices][0]; first.osc.onended(); assert.equal(a.voices.size,7); assert.ok(first.gain.disconnected);
+  const remaining=[...a.voices];a.setEnabled(false); assert.equal(a.voices.size,0);assert.ok(remaining.every(v=>v.osc.stopped));
+  assert.equal(a.gunshot('pistol'),false);
+});
+test('missing gun samples use a playable fallback', () => {
+  const a=new HorrorAudio(context());a.setEnabled(true);assert.equal(a.gunshot('sniper'),false);assert.equal(a.voices.size,1);
+});
+
+test('failed sample loads retry without redownloading successful samples', async () => {
+  const originalFetch=globalThis.fetch, counts=new Map();
+  globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
+  try {
+    const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,3);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,4);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),5);
+  } finally {globalThis.fetch=originalFetch;}
 });

@@ -61,3 +61,9 @@ Click SOUND ON to enable procedural wind, a slowly beating low drone, occasional
 Late bosses alternate attack patterns and enter a faster second phase below half health. PATIENT ZERO cycles all three attacks and adds a third phase below 25%; enraged acid attacks mark three impact areas. Each area is shown before damage. Shotgun damage is 18 per pellet (108 per shell), with collision-safe knockback and a short stagger on regular enemies. Bosses resist knockback. The HUD counts active and pending enemies, and a three-second warning precedes the boss spawn. Gameplay controls, weapon stats and help text use larger labels.
 
 Zombie vocalizations are synthesized locally: walkers groan, runners snarl briefly, and brutes/bosses use deeper growls. The nearest living enemy within 560 world units vocalizes at intervals; volume increases nearby and stereo position follows its side of the player. Muting, pausing, or hiding the tab cancels vocalizations with the other game audio.
+
+## Eight-weapon arsenal and audio checks
+
+Added JUDGE .44 revolver (120 CR), VANGUARD A4 assault rifle (240 CR), BASTION M60 LMG (320 CR), and LONGWATCH .50 sniper (380 CR). They use the existing shared reserve and run-only ownership. Shop range labels explain close-range versus long-range tradeoffs.
+
+Every weapon card has a sound preview; the shop also previews all four zombie types. Preview buttons enable sound after the click, cancel stale preview requests, and stop playback when closing the shop. Gunshots use four edited CC0 live-fire recordings by Tabasco (pistol, shotgun, rifle, SKS), with per-weapon pitch/level variations. See dist/audio/CREDITS.md for source and processing. Failed sample loads fall back to synthesis and can retry. Zombie voices remain procedural, with proximity and stereo positioning.
