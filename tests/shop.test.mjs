@@ -74,3 +74,16 @@ test('restart clears money, purchased weapons, and weapon upgrades', () => {
   assert.equal(g.credits, 0); assert.equal(g.weaponId, 'pistol'); assert.deepEqual([...g.ownedWeapons.keys()], ['pistol']);
   assert.equal(g.gun.damage, 34); assert.equal(g.gun.mag, 18);
 });
+
+test('shotgun pellets knock back and stagger without pushing an enemy through a wall', () => {
+  const g = shop(140); g.buyWeapon('shotgun'); g.state = 'playing'; g.remaining = 999; g.spawnClock = 999;
+  g.player.x = 640; g.player.y = 410; g.player.angle = 0;
+  const e = target(g, 'walker', 1000); e.x = 685; e.speed = 65; g.enemies = [e];
+  g.shoot(); g.update(.05);
+  assert.ok(e.x > 685); assert.ok(e.stagger > 0); const x = e.x; g.bullets = [];
+  g.update(.05); assert.equal(e.x, x);
+  g.player.x = 680; g.player.y = 300; g.player.angle = 0;
+  e.x = 709; e.y = 300; e.stagger = 0; g.gun.cooldown = 0;
+  g.shoot(); g.update(.05);
+  assert.ok(e.x <= 711, 'barrier at x725 must stop radius14 body');
+});

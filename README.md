@@ -55,3 +55,7 @@ Each of the 10 waves ends with a named boss, from THE WARDEN to PATIENT ZERO. Bo
 ## Horror audio
 
 Click SOUND ON to enable procedural wind, a slowly beating low drone, occasional distant creaks, a boss warning sting, and a double heartbeat during boss fights or below 30% health. Low health speeds up the pulse. Ambience stops while paused, in the shop/manual, or outside the active tab; SOUND OFF also cancels scheduled effects immediately. Audio uses Web Audio after a user gesture and needs no external audio files.
+
+## Combat readability update
+
+Late bosses alternate attack patterns and enter a faster second phase below half health. PATIENT ZERO cycles all three attacks and adds a third phase below 25%; enraged acid attacks mark three impact areas. Each area is shown before damage. Shotgun damage is 18 per pellet (108 per shell), with collision-safe knockback and a short stagger on regular enemies. Bosses resist knockback. The HUD counts active and pending enemies, and a three-second warning precedes the boss spawn. Gameplay controls, weapon stats and help text use larger labels.

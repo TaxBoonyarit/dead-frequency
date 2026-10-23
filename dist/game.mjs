@@ -137,13 +137,13 @@ function render(now) {
   const enemies = game.state === 'menu' ? demo : game.enemies;
   for (const h of game.hazards) { circle(ctx, h.x, h.y, h.r, h.color + '66'); }
   for (const e of enemies) if (e.type === 'boss' && e.windup > 0) {
-    if (e.ability === 'charge') {
+    if (e.activeAbility === 'charge') {
       ctx.save(); ctx.lineCap = 'round';
       line(ctx, [[e.x, e.y], [e.chargeEndX, e.chargeEndY]], '#ffab7833', (e.r + 14) * 2);
       line(ctx, [[e.x, e.y], [e.chargeEndX, e.chargeEndY]], '#ffab78', 3); ctx.restore();
     } else {
       ctx.strokeStyle = '#ffab78'; ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(e.targetX, e.targetY, e.ability === 'acid' ? 72 : 105, 0, Math.PI * 2); ctx.stroke();
+      for (const target of e.attackTargets || []) { ctx.beginPath(); ctx.arc(target.x, target.y, e.activeAbility === 'acid' ? 72 : 105, 0, Math.PI * 2); ctx.stroke(); }
     }
   }
   enemies.forEach(e => drawBody(e));
@@ -195,12 +195,13 @@ function updateHUD() {
   const p = game.player, g = game.gun;
   $('health-label').textContent = Math.ceil(p.hp); $('health-bar').style.width = `${p.hp / p.maxHp * 100}%`; $('health-bar').style.background = p.hp < 30 ? '#d98d67' : '';
   $('stamina-bar').style.width = `${p.stamina}%`;
+  $('threat-count').textContent = `เหลือ ${game.remaining + game.enemies.length} ตัว${game.remaining === 1 ? ' · บอสกำลังมา' : ''}`;
   $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
   $('ammo-label').innerHTML = `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
   $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : g.ammo === 0 && g.reserve === 0 ? 'FIND AMMO' : WEAPONS.find(w => w.id === game.weaponId).name;
   const boss = game.enemies.find(e => e.type === 'boss');
   $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
-  if (boss) { $('boss-name').textContent = `${boss.name} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
+  if (boss) { $('boss-name').textContent = `${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
   $('credits').textContent = `${game.credits} CR`;
   const shopLink = $('wave-shop-button');
   if (shopLink) shopLink.textContent = `ร้านอาวุธ · ${game.credits} CR ↗`;
@@ -334,6 +335,8 @@ function frame(now) {
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') tone(250, .06, 'square', .015, 160);
     if (e.type === 'loaded') tone(450, .07, 'square', .015, 550);
+    if (e.type === 'bossIncoming') { game.banner = 3; $('wave-banner').innerHTML = 'BOSS INCOMING<small>บอสกำลังมา · เตรียมอาวุธ</small>'; }
+    if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
     if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossWarning(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${e.wave === 10 ? 'FINAL TRANSMISSION' : 'THEY HEARD YOU.'}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); tone(550, .15, 'sine', .04, 900); }

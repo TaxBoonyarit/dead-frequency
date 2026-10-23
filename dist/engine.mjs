@@ -2,7 +2,7 @@ export const W = 1280, H = 800;
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 1.4, pellets: 1, spread: .035, range: .9 },
   { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 90, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
-  { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด หยุดศัตรูในระยะประชิด', price: 140, damage: 14, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
+  { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด ผลักและชะงักศัตรูในระยะประชิด', price: 140, damage: 18, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
   { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 180, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
 ];
 export const BOSS_CHARGE = { speed: 360, duration: .65 };
@@ -10,7 +10,7 @@ export const BOSSES = [
   ['THE WARDEN', 'slam'], ['RED HOUND', 'charge'], ['ACID MOTHER', 'acid'],
   ['IRON GRAVEDIGGER', 'slam'], ['NIGHT STALKER', 'charge'], ['PLAGUE HERALD', 'acid'],
   ['BONE COLOSSUS', 'slam'], ['BLOOD REAPER', 'charge'], ['THE CONTAMINATED', 'acid'], ['PATIENT ZERO', 'slam'],
-].map(([name, ability], i) => ({ name, ability, hp: 300 + i * 100, reward: 60 + i * 15 }));
+].map(([name, ability], i) => ({ name, ability, hp: 300 + i * 100, reward: 60 + i * 15, attacks: i < 3 ? [ability] : i === 9 ? ['slam', 'charge', 'acid'] : [ability, ['charge', 'acid', 'slam'][i % 3]] }));
 export const OBSTACLES = [
   { x: 95, y: 95, w: 245, h: 170, kind: 'building', label: 'WAREHOUSE 04' },
   { x: 920, y: 85, w: 255, h: 185, kind: 'building', label: 'NO ENTRY' },
@@ -137,7 +137,7 @@ export class Game {
   start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
   nextWave() {
     this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
-    this.spawnClock = .3; this.banner = 3;
+    this.spawnClock = .3; this.banner = 3; this.bossWarned = false;
     this.emit('wave', { wave: this.wave });
   }
   pause() { if (this.state === 'playing') this.state = 'paused'; else if (this.state === 'paused') this.state = 'playing'; }
@@ -168,7 +168,7 @@ export class Game {
       const spread = g.pellets === 1 ? (this.random() - .5) * g.spread : (i / (g.pellets - 1) - .5) * g.spread + (this.random() - .5) * .015;
       const angle = p.angle + spread;
       // Sweep from the survivor so even point-blank targets are hit.
-      this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: g.range, damage: g.damage });
+      this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: g.range, damage: g.damage, knockback: this.weaponId === 'shotgun' ? 6 : 0 });
     }
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
     this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
@@ -180,7 +180,7 @@ export class Game {
     const spec = BOSSES[this.wave - 1];
     const hp = spec.hp * this.scale;
     const boss = { ...spec, x: W / 2, y: 32, hp, maxHp: hp, type: 'boss', r: 25,
-      speed: spec.ability === 'charge' ? 85 : 52, phase: 0, hit: 0, attackClock: 2.5, windup: 0, dash: 0 };
+      speed: spec.ability === 'charge' ? 85 : 52, phase: 0, hit: 0, attackIndex: 0, stage: 1, attackClock: 2.5, windup: 0, dash: 0 };
     this.enemies.push(boss); this.remaining--; this.emit('boss', { name: spec.name });
   }
   hurtPlayer(damage) {
@@ -192,21 +192,29 @@ export class Game {
   }
   updateBoss(e, dt) {
     e.dashStep = 0;
+    const stage = this.wave >= 4 && e.hp <= e.maxHp * .5 ? (this.wave === 10 && e.hp <= e.maxHp * .25 ? 3 : 2) : 1;
+    if (stage > e.stage) { e.stage = stage; this.emit('bossPhase', { name: e.name, stage }); }
+
     if (e.windup > 0) {
       e.windup = Math.max(0, e.windup - dt);
       if (e.windup === 0) {
-        if (e.ability === 'charge') e.dash = BOSS_CHARGE.duration;
-        else this.hazards.push({ x: e.targetX, y: e.targetY, r: e.ability === 'acid' ? 72 : 105, life: .35, damage: 24 + this.wave, color: e.ability === 'acid' ? '#bddc65' : '#ef986f' });
+        if (e.activeAbility === 'charge') e.dash = BOSS_CHARGE.duration;
+        else for (const target of e.attackTargets) this.hazards.push({ ...target, r: e.activeAbility === 'acid' ? 72 : 105, life: .35, damage: 24 + this.wave, color: e.activeAbility === 'acid' ? '#bddc65' : '#ef986f' });
       }
     } else if (e.dash <= 0) {
       e.attackClock -= dt;
       if (e.attackClock <= 0) {
-        e.targetX = e.ability === 'slam' ? e.x : this.player.x;
-        e.targetY = e.ability === 'slam' ? e.y : this.player.y;
+        e.activeAbility = e.attacks[e.attackIndex++ % e.attacks.length];
+        e.targetX = e.activeAbility === 'slam' ? e.x : this.player.x;
+        e.targetY = e.activeAbility === 'slam' ? e.y : this.player.y;
+        e.attackTargets = [{ x: e.targetX, y: e.targetY }];
+        if (e.activeAbility === 'acid' && e.stage >= 2) {
+          e.attackTargets.push({ x: e.targetX - 140, y: e.targetY }, { x: e.targetX + 140, y: e.targetY });
+        }
         e.chargeAngle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
         e.chargeEndX = e.x + Math.cos(e.chargeAngle) * BOSS_CHARGE.speed * BOSS_CHARGE.duration;
         e.chargeEndY = e.y + Math.sin(e.chargeAngle) * BOSS_CHARGE.speed * BOSS_CHARGE.duration;
-        e.windup = 1.1; e.attackClock = this.wave === 10 ? 2 : 3.5;
+        e.windup = e.stage >= 2 ? .9 : 1.1; e.attackClock = (this.wave === 10 ? 2.8 : 3.5) / (1 + (e.stage - 1) * .25);
       }
     }
     if (e.dash > 0) { e.dashStep = Math.min(dt, e.dash); e.dash = Math.max(0, e.dash - e.dashStep); }
@@ -258,11 +266,12 @@ export class Game {
     }
     if (input.fire) this.shoot();
     this.spawnClock -= dt;
-    if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); }
+    if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); if (this.remaining === 1 && !this.bossWarned) { this.bossWarned = true; this.spawnClock = 3; this.emit('bossIncoming'); } }
     this.pathClock -= dt;
     if (this.pathClock <= 0) { this.paths.clear(); this.pathClock = .35; }
     for (const e of this.enemies) {
       if (e.type === 'boss') this.updateBoss(e, dt);
+      e.stagger = Math.max(0, (e.stagger || 0) - dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
       let target = approachPoint(e, p, e.r);
       if (!clearLine(e.x, e.y, target.x, target.y, e.r)) {
@@ -275,7 +284,7 @@ export class Game {
         }
       }
       const a = Math.atan2(target.y - e.y, target.x - e.x); e.angle = a;
-      const step = e.windup > 0 ? 0 : e.dashStep > 0 ? BOSS_CHARGE.speed * e.dashStep : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
+      const step = e.windup > 0 || e.stagger > 0 ? 0 : e.dashStep > 0 ? BOSS_CHARGE.speed * e.dashStep : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
       const direction = e.dashStep > 0 ? e.chargeAngle : a;
       move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
@@ -299,6 +308,11 @@ export class Game {
         if (blocked(sx, sy, 1)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
         const e = this.enemies.find(e => e.hp > 0 && segmentHit(sx, sy, sx, sy, e.x, e.y, e.r + 3));
         if (e) {
+          if (b.knockback) {
+            const distance = b.knockback * (e.type === 'boss' ? .25 : 1), length = Math.hypot(b.vx, b.vy) || 1;
+            move(e, b.vx / length * distance, b.vy / length * distance, e.r);
+            if (e.type !== 'boss') e.stagger = .45;
+          }
           e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
           if (e.hp <= 0) {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;

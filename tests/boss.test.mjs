@@ -64,3 +64,25 @@ test('charge covers its warned distance independent of frame duration', () => {
     assert.ok(Math.abs(b.y - b.chargeEndY) < 1e-8, `charge misses warning at dt ${dt}`);
   }
 });
+
+test('late bosses alternate attacks and patient zero progresses through three phases', () => {
+  const g = fight(10), b = g.enemies[0], seen = [];
+  for (let i = 0; i < 3; i++) { b.windup = 0; b.dash = 0; b.attackClock = 0; g.updateBoss(b, .01); seen.push(b.activeAbility); }
+  assert.deepEqual(seen, ['slam', 'charge', 'acid']);
+  b.hp = b.maxHp * .49; g.updateBoss(b, .01); assert.equal(b.stage, 2);
+  b.hp = b.maxHp * .24; g.updateBoss(b, .01); assert.equal(b.stage, 3);
+  assert.equal(g.events.filter(e => e.type === 'bossPhase').length, 2);
+  b.windup = 0; b.attackIndex = 2; b.attackClock = 0; g.updateBoss(b, .01);
+  assert.equal(b.attackTargets.length, 3); assert.equal(b.windup, .9);
+  for (let i = 0; i < 20; i++) g.updateBoss(b, .05);
+  assert.equal(g.hazards.length, 3); assert.ok(g.hazards.every(h => h.r === 72));
+});
+test('boss warning fires once and allows three seconds before spawning', () => {
+  const g = new Game(() => .5); g.start(); g.remaining = 2; g.spawnClock = 0;
+  g.update(.01); assert.equal(g.remaining, 1); assert.equal(g.events.filter(e => e.type === 'bossIncoming').length, 1);
+  for (let i = 0; i < 59; i++) g.update(.05);
+  assert.equal(g.enemies.some(e => e.type === 'boss'), false);
+  g.update(.05); g.update(.05);
+  assert.equal(g.enemies.filter(e => e.type === 'boss').length, 1);
+  assert.equal(g.events.filter(e => e.type === 'bossIncoming').length, 1);
+});
