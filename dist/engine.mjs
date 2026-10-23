@@ -5,6 +5,7 @@ export const WEAPONS = [
   { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด หยุดศัตรูในระยะประชิด', price: 140, damage: 14, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
   { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 180, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
 ];
+export const BOSS_CHARGE = { speed: 360, duration: .65 };
 export const BOSSES = [
   ['THE WARDEN', 'slam'], ['RED HOUND', 'charge'], ['ACID MOTHER', 'acid'],
   ['IRON GRAVEDIGGER', 'slam'], ['NIGHT STALKER', 'charge'], ['PLAGUE HERALD', 'acid'],
@@ -78,7 +79,19 @@ function approachPoint(from, player, radius) {
   const dx = from.x - player.x, dy = from.y - player.y, distance = Math.hypot(dx, dy);
   // Stop within attack range; the player can stand closer to a wall than a brute.
   const stop = radius + 12;
-  return distance <= stop ? from : { x: player.x + dx / distance * stop, y: player.y + dy / distance * stop };
+  if (distance <= stop) return from;
+  const radial = { x: player.x + dx / distance * stop, y: player.y + dy / distance * stop };
+  if (clearLine(from.x, from.y, radial.x, radial.y, radius)) return radial;
+  // A large enemy may need to approach a wall-hugging survivor from the side.
+  // Seed navigation with every visible point in melee range, not a blocked radial endpoint.
+  let best = radial, cost = Infinity;
+  for (let i = 0; i < 32; i++) {
+    const angle = i * Math.PI / 16;
+    const point = { x: player.x + Math.cos(angle) * stop, y: player.y + Math.sin(angle) * stop };
+    const length = Math.hypot(point.x - from.x, point.y - from.y);
+    if (length < cost && clearLine(from.x, from.y, point.x, point.y, radius)) { best = point; cost = length; }
+  }
+  return best;
 }
 function segmentHit(ax, ay, bx, by, cx, cy, radius) {
   const dx = bx - ax, dy = by - ay;
@@ -178,22 +191,25 @@ export class Game {
     if (p.hp <= 0) { this.state = 'dead'; this.emit('dead'); }
   }
   updateBoss(e, dt) {
+    e.dashStep = 0;
     if (e.windup > 0) {
       e.windup = Math.max(0, e.windup - dt);
       if (e.windup === 0) {
-        if (e.ability === 'charge') e.dash = .65;
+        if (e.ability === 'charge') e.dash = BOSS_CHARGE.duration;
         else this.hazards.push({ x: e.targetX, y: e.targetY, r: e.ability === 'acid' ? 72 : 105, life: .35, damage: 24 + this.wave, color: e.ability === 'acid' ? '#bddc65' : '#ef986f' });
       }
-    } else if (e.dash > 0) e.dash = Math.max(0, e.dash - dt);
-    else {
+    } else if (e.dash <= 0) {
       e.attackClock -= dt;
       if (e.attackClock <= 0) {
         e.targetX = e.ability === 'slam' ? e.x : this.player.x;
         e.targetY = e.ability === 'slam' ? e.y : this.player.y;
         e.chargeAngle = Math.atan2(this.player.y - e.y, this.player.x - e.x);
+        e.chargeEndX = e.x + Math.cos(e.chargeAngle) * BOSS_CHARGE.speed * BOSS_CHARGE.duration;
+        e.chargeEndY = e.y + Math.sin(e.chargeAngle) * BOSS_CHARGE.speed * BOSS_CHARGE.duration;
         e.windup = 1.1; e.attackClock = this.wave === 10 ? 2 : 3.5;
       }
     }
+    if (e.dash > 0) { e.dashStep = Math.min(dt, e.dash); e.dash = Math.max(0, e.dash - e.dashStep); }
   }
   spawn() {
     if (this.remaining === 1) { this.spawnBoss(); return; }
@@ -259,8 +275,8 @@ export class Game {
         }
       }
       const a = Math.atan2(target.y - e.y, target.x - e.x); e.angle = a;
-      const step = e.windup > 0 ? 0 : e.dash > 0 ? 360 * dt : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
-      const direction = e.dash > 0 ? e.chargeAngle : a;
+      const step = e.windup > 0 ? 0 : e.dashStep > 0 ? BOSS_CHARGE.speed * e.dashStep : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
+      const direction = e.dashStep > 0 ? e.chargeAngle : a;
       move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
         this.hurtPlayer(e.type === 'boss' ? 28 : e.type === 'brute' ? 24 : 12);

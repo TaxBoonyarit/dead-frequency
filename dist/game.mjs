@@ -136,9 +136,14 @@ function render(now) {
   const enemies = game.state === 'menu' ? demo : game.enemies;
   for (const h of game.hazards) { circle(ctx, h.x, h.y, h.r, h.color + '66'); }
   for (const e of enemies) if (e.type === 'boss' && e.windup > 0) {
-    ctx.strokeStyle = '#ffab78'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(e.targetX, e.targetY, e.ability === 'acid' ? 72 : 105, 0, Math.PI * 2); ctx.stroke();
-    if (e.ability === 'charge') line(ctx, [[e.x, e.y], [e.targetX, e.targetY]], '#ffab78', 7);
+    if (e.ability === 'charge') {
+      ctx.save(); ctx.lineCap = 'round';
+      line(ctx, [[e.x, e.y], [e.chargeEndX, e.chargeEndY]], '#ffab7833', (e.r + 14) * 2);
+      line(ctx, [[e.x, e.y], [e.chargeEndX, e.chargeEndY]], '#ffab78', 3); ctx.restore();
+    } else {
+      ctx.strokeStyle = '#ffab78'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(e.targetX, e.targetY, e.ability === 'acid' ? 72 : 105, 0, Math.PI * 2); ctx.stroke();
+    }
   }
   enemies.forEach(e => drawBody(e));
   // A flashlight gives direction without hiding the paths around the survivor.

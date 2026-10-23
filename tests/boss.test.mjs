@@ -39,3 +39,28 @@ test('boss health respects difficulty and restart clears attack effects', () => 
   assert.equal(g.enemies[0].hp, BOSSES[0].hp * 1.35);
   g.hazards.push({life: 1}); g.start(); assert.equal(g.hazards.length, 0); assert.equal(g.enemies.length, 0);
 });
+
+test('bosses reach wall-hugging survivors through valid melee approaches', () => {
+  for (const [x, y] of [[79,627], [77,588], [80,113], [251,732], [1189,602]]) {
+    const g = fight(), b = g.enemies[0]; g.player.x = x; g.player.y = y; g.player.invulnerable = 1000;
+    assert.equal(blocked(x, y, 14), false);
+    for (let i = 0; i < 2400 && Math.hypot(b.x - x, b.y - y) >= b.r + 15; i++) {
+      g.update(.05); assert.equal(blocked(b.x, b.y, b.r), false);
+    }
+    assert.ok(Math.hypot(b.x - x, b.y - y) < b.r + 15, `boss stuck approaching ${x},${y}`);
+  }
+});
+
+test('charge covers its warned distance independent of frame duration', () => {
+  for (const dt of [.05, 1/60, .017]) {
+    const g = fight(2), b = g.enemies[0]; b.x = 640; b.y = 350; g.player.x = 640; g.player.y = 420;
+    b.attackClock = 0; g.player.invulnerable = 100;
+    g.update(dt); const startY = b.y;
+    assert.ok(Math.abs(b.chargeEndY - startY - 234) < 1e-8);
+    for (let i = 0; i < 200; i++) {
+      g.update(dt);
+      if (b.dashStep > 0 && b.dash === 0) break;
+    }
+    assert.ok(Math.abs(b.y - b.chargeEndY) < 1e-8, `charge misses warning at dt ${dt}`);
+  }
+});
