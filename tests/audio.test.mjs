@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HorrorAudio, GUN_AUDIO } from '../dist/audio.mjs';
+import { HorrorAudio, GUN_AUDIO, ZOMBIE_AUDIO } from '../dist/audio.mjs';
 function context() {
   const param = () => ({ value: 0, cancelScheduledValues() {}, setValueAtTime(v) { this.value = v; }, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { this.peak = v; }, setTargetAtTime(v) { this.value = v; } });
   const nodes = [];
@@ -71,9 +71,9 @@ test('failed sample loads retry without redownloading successful samples', async
   globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,10);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,11);
-    assert.equal([...counts.values()].reduce((a,b)=>a+b),12);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,18);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,19);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),20);
   } finally {globalThis.fetch=originalFetch;}
 });
 
@@ -86,4 +86,18 @@ test('reload stages follow game progress once each and reset after loading', () 
   a.reloadProgress('pistol',.2,1.4);assert.equal(a.voices.size,3);
   a.reloadProgress('pistol',0,1.4);assert.equal(a.reloadStep,-1);
   a.setEnabled(false);assert.equal(a.voices.size,0);
+});
+
+test('recorded zombie voices alternate, attenuate with distance and stop on mute', () => {
+  const a = new HorrorAudio(context()); a.setEnabled(true);
+  for (const id of Object.values(ZOMBIE_AUDIO).flat()) a.gunBuffers.set(`zombie-${id}`, {duration:1, id});
+  for (const type of Object.keys(ZOMBIE_AUDIO)) {
+    assert.equal(a.zombieGrowl(type,30),true); const first=[...a.voices].at(-1);
+    assert.equal(a.zombieGrowl(type,500),true); const second=[...a.voices].at(-1);
+    assert.notEqual(first.osc.buffer.id,second.osc.buffer.id);
+    assert.ok(first.gain.gain.value>second.gain.gain.value);
+    assert.ok(first.osc.started && second.osc.started);
+  }
+  const voices=[...a.voices];a.setEnabled(false);
+  assert.equal(a.voices.size,0);assert.ok(voices.every(v=>v.osc.stopped && v.gain.disconnected));
 });

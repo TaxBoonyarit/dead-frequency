@@ -26,3 +26,18 @@ Gun Reload Sound Effects by BMacZero / Brian MacIntosh, CC0.
 https://opengameart.org/content/gun-reload-sound-effects
 Original files: clipload2.wav, clipload1.wav, singlebullet1.wav.
 Stored as reload-out.wav, reload-in.wav, reload-bolt.wav. Playback pitch and timing vary by weapon.
+
+## Recorded zombie voices
+
+ArcadeParty — Zombie / Skeleton / Monster Voice Effects (CC0).
+https://opengameart.org/content/zombie-skeleton-monster-voice-effects
+
+`zombie-1.wav` through `zombie-8.wav` derive from `zombieYell1.wav` through
+`zombieYell8.wav` respectively. Trimmed quiet edges, normalized with headroom,
+converted to mono PCM16 at 24 kHz; slight fades prevent edge clicks.
+Walker uses 1/2, runner 3/4, brute 5/6, boss 7/8. Each type alternates takes;
+brute/boss playback is slowed modestly. Procedural growls remain a load-failure fallback.
+Rebuild: `python3 scripts/prepare-zombie-audio.py <extracted-pack-directory>`.
+
+Gun recordings additionally use gentle amplitude compression (power 0.8)
+to lift the body and decay, preserving peak headroom and original playback pitch.

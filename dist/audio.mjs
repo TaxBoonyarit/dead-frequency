@@ -1,13 +1,14 @@
 export const GUN_AUDIO = {
-  pistol: ['shot-pistol', 1, .25], smg: ['shot-smg', 1, .18], shotgun: ['shot-shotgun', 1, .3],
-  rifle: ['shot-rifle', 1, .26], revolver: ['shot-revolver', 1, .28], assault: ['shot-assault', 1, .22],
-  lmg: ['shot-lmg', .96, .24], sniper: ['shot-sniper', 1, .32],
+  pistol: ['shot-pistol', 1, .44], smg: ['shot-smg', 1, .32], shotgun: ['shot-shotgun', 1, .52],
+  rifle: ['shot-rifle', 1, .46], revolver: ['shot-revolver', 1, .48], assault: ['shot-assault', 1, .38],
+  lmg: ['shot-lmg', 1, .42], sniper: ['shot-sniper', 1, .54],
 };
 export const GUN_RECORDINGS = {
   pistol: 'Walther PPQ · 9mm', smg: 'Carl Gustav M45 · SMG', shotgun: 'Benelli Nova · 12 gauge',
   rifle: 'SKS · semi-auto', revolver: 'Smith & Wesson 642 · revolver', assault: 'AR-15 · carbine',
   lmg: 'AK-47 · automatic rifle', sniper: 'Tikka T3 · bolt-action',
 };
+export const ZOMBIE_AUDIO = { walker: [1, 2], runner: [3, 4], brute: [5, 6], boss: [7, 8] };
 // Local firearm recordings and procedural horror ambience; no background timers.
 export class HorrorAudio {
   constructor(context) {
@@ -15,7 +16,7 @@ export class HorrorAudio {
     this.master.gain.value = 0; this.master.connect(context.destination);
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
     this.reloadStep = -1; this.gunBuffers = new Map(); this.gunLoading = null;
-    this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
+    this.lastGrowl = new Map(); this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
     const data = this.noise.getChannelData(0);
@@ -42,7 +43,7 @@ export class HorrorAudio {
   }
   loadWeaponAudio() {
     if (this.gunLoading) return this.gunLoading;
-    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt'].filter(id => !this.gunBuffers.has(id)).map(async id => {
+    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt', ...Object.values(ZOMBIE_AUDIO).flat().map(id => `zombie-${id}`)].filter(id => !this.gunBuffers.has(id)).map(async id => {
       const response = await fetch(new URL(`./audio/${id}.wav`, import.meta.url));
       if (!response.ok) throw new Error('Audio unavailable');
       const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
@@ -56,7 +57,7 @@ export class HorrorAudio {
     const buffer = this.gunBuffers.get(sample);
     if (!buffer) { this.tone(95, .12, 'triangle', .06, 32); return false; }
     const c = this.context, osc = c.createBufferSource(), gain = c.createGain();
-    osc.buffer = buffer; osc.playbackRate.value = rate * (.985 + Math.random() * .03);
+    osc.buffer = buffer; osc.playbackRate.value = rate;
     gain.gain.value = volume; osc.connect(gain); gain.connect(this.master);
     const voice = { osc, gain }; this.voices.add(voice);
     osc.onended = () => { osc.disconnect(); gain.disconnect(); this.voices.delete(voice); };
@@ -86,6 +87,26 @@ export class HorrorAudio {
   }
   zombieGrowl(type, distance, horizontal = 0) {
     if (!this.enabled) return;
+    const choices = ZOMBIE_AUDIO[type] || ZOMBIE_AUDIO.walker;
+    const previous = this.lastGrowl.get(type);
+    const available = choices.filter(id => this.gunBuffers.has(`zombie-${id}`));
+    if (available.length) {
+      const id = available.find(id => id !== previous) || available[0];
+      this.lastGrowl.set(type, id);
+      const c = this.context, osc = c.createBufferSource(), gain = c.createGain(), extras = [];
+      osc.buffer = this.gunBuffers.get(`zombie-${id}`);
+      osc.playbackRate.value = type === 'boss' ? .8 : type === 'brute' ? .9 : 1;
+      gain.gain.value = .06 + .34 * Math.max(0, 1 - distance / 560);
+      osc.connect(gain);
+      if (c.createStereoPanner) {
+        const pan = c.createStereoPanner(); pan.pan.value = Math.max(-.85, Math.min(.85, horizontal / 300));
+        gain.connect(pan); pan.connect(this.master); extras.push(pan);
+      } else gain.connect(this.master);
+      const voice = { osc, gain, extras }; this.voices.add(voice);
+      osc.onended = () => { osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); this.voices.delete(voice); };
+      osc.start(); osc.stop(c.currentTime + osc.buffer.duration / osc.playbackRate.value);
+      return true;
+    }
     const [pitch, duration] = ({ walker: [83, 1.15], runner: [155, .65], brute: [54, 1.5], boss: [42, 1.9] })[type] || [83, 1.15];
     const c = this.context, t = c.currentTime;
     const buffer = c.createBuffer(1, Math.ceil(duration * c.sampleRate), c.sampleRate), data = buffer.getChannelData(0);

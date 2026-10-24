@@ -320,11 +320,11 @@ async function previewSound(id, zombie = false, reload = false) {
   $('sound-button').textContent = 'SOUND ON'; $('sound-button').setAttribute('aria-label', 'ปิดเสียงเกม');
   if (!soundscape) { $('shop-feedback').textContent = 'เบราว์เซอร์นี้เปิดเสียงไม่ได้'; return; }
   await audio.resume().catch(() => {});
-  if (!zombie) await soundscape.loadWeaponAudio();
+  await soundscape.loadWeaponAudio();
   if (request !== previewRequest || !$('armory').open || !soundEnabled) return;
   soundscape.stopVoices();
   if (reload) { const duration = game.weaponStats(id).reloadTime; [0,.4,.78].forEach((part, step) => soundscape.reloadEffect(id, step, duration * part)); $('shop-feedback').textContent = 'กำลังลองเสียงรีโหลด · ถอด / เติม / ขึ้นลำ'; }
-  else if (zombie) { soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = `กำลังลองเสียงซอมบี้ · ${id}`; }
+  else if (zombie) { const recorded = soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = recorded ? `เสียงซอมบี้บันทึกจริง · ${id}` : 'โหลดเสียงซอมบี้ไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
   else { const recorded = soundscape.gunshot(id); $('shop-feedback').textContent = recorded ? `เสียงบันทึกจริง · ${GUN_RECORDINGS[id]}` : 'โหลดเสียงบันทึกไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
 }
 document.querySelectorAll('[data-zombie-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.zombiePreview, true));
