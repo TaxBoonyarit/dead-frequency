@@ -18,7 +18,7 @@ npm run dev
 
 Workflow จะตรวจ syntax และรันเทสต์ก่อนเผยแพร่เฉพาะ `dist/` พร้อมไฟล์เสียง เว็บจะอยู่ที่ https://taxboonyarit.github.io/dead-frequency/ หลัง deploy สำเร็จ
 
-เมื่อเปิดเว็บ กด **SOUND OFF** ให้เปลี่ยนเป็น **SOUND ON** เพื่อเปิดเสียง
+เมื่อเปิดเว็บ กด **เสียง: ปิด** ให้เปลี่ยนเป็น **เสียง: เปิด** เพื่อเปิดเสียง
 
 ## ควบคุม
 
@@ -43,7 +43,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 
 ปืนใหม่มีกระสุนเต็มแมกกาซีน ใช้กระสุนสำรองร่วมกัน สลับปืนที่ซื้อแล้วได้ฟรี อัปเกรดมีผลกับทุกกระบอก เงินและปืนจะรีเซ็ตเมื่อเริ่มเล่นรอบใหม่
 
-เลือกความยากได้ก่อนเริ่มเกม มีระบบเสียงที่เปิดได้จาก SOUND OFF และบันทึกคะแนนสูงสุดใน localStorage ของเบราว์เซอร์ เกมหยุดอัตโนมัติเมื่อสลับหน้าต่าง
+เลือกความยากได้ก่อนเริ่มเกม มีระบบเสียงที่เปิดได้จาก เสียง: ปิด และบันทึกคะแนนสูงสุดใน localStorage ของเบราว์เซอร์ เกมหยุดอัตโนมัติเมื่อสลับหน้าต่าง
 
 ## ตรวจสอบ
 
@@ -62,7 +62,7 @@ Each of the 10 waves ends with a named boss, from THE WARDEN to PATIENT ZERO. Bo
 
 ## Horror audio
 
-Click SOUND ON to enable procedural wind, a slowly beating low drone, occasional distant creaks, a boss warning sting, and a double heartbeat during boss fights or below 30% health. Low health speeds up the pulse. Ambience stops while paused, in the shop/manual, or outside the active tab; SOUND OFF also cancels scheduled effects immediately. Audio uses Web Audio after a user gesture. Recordings ship in dist/audio/. The selected horror-trailer MP3 loops quietly at gain 0.06 with a 1.5-second fade-in.
+Click เสียง: เปิด to enable procedural wind, a slowly beating low drone, occasional distant creaks, a boss warning sting, and a double heartbeat during boss fights or below 30% health. Low health speeds up the pulse. Ambience stops while paused, in the shop/manual, or outside the active tab; เสียง: ปิด also cancels scheduled effects immediately. Audio uses Web Audio after a user gesture. Recordings ship in dist/audio/. The selected horror-trailer MP3 loops quietly at gain 0.06 with a 1.5-second fade-in.
 
 ## Combat readability update
 
@@ -78,13 +78,13 @@ Every weapon card has a sound preview; the shop also previews all four zombie ty
 
 ## Zombie visuals
 
-Canvas-drawn zombie silhouettes now have crooked limbs, torn clothes, exposed ribs, recessed eye sockets and broken jaws. Runners crouch with longer reaching arms, brutes have swollen shoulders, and bosses have bone spines plus an enraged glow. Gait follows each enemy's movement phase. FIELD MANUAL includes a scaled reference view of all four silhouettes. Rendering is separate from enemy collision and combat stats.
+Canvas-drawn zombie silhouettes now have crooked limbs, torn clothes, exposed ribs, recessed eye sockets and broken jaws. Runners crouch with longer reaching arms, brutes have swollen shoulders, and bosses have bone spines plus an enraged glow. Gait follows each enemy's movement phase. คู่มือ includes a scaled reference view of all four silhouettes. Rendering is separate from enemy collision and combat stats.
 
-Each boss now carries a stable bossLook index from its wave definition, selecting one of ten separate horror silhouettes: iron cage, hound jaw, acid sacs, steel cleaver, spider limbs, parasite crown, multiple skulls, twin scythes, clustered eyes, or a toothed torso maw. Enraged stages add glowing fissures, with a distinct core on PATIENT ZERO phase three. FIELD MANUAL includes an expandable dossier for all ten wave bosses.
+Each boss now carries a stable bossLook index from its wave definition, selecting one of ten separate horror silhouettes: iron cage, hound jaw, acid sacs, steel cleaver, spider limbs, parasite crown, multiple skulls, twin scythes, clustered eyes, or a toothed torso maw. Enraged stages add glowing fissures, with a distinct core on PATIENT ZERO phase three. คู่มือ includes an expandable dossier for all ten wave bosses.
 
 ## Wave environments
 
-Each new run shuffles all ten scenes without repeats; the order stays fixed during that run, including pause/resume. Every wave selects the next scene: quarantine block, red alley, abandoned hospital, ironworks, Blackwood, drowned docks, bone yard, slaughterhouse, biohazard lab, and Zero Ground. Scenes change ground and building materials, roof props, lighting, signage, and rain/mist/spores/embers. The scene is repainted only at wave changes; each wave also randomizes building positions and sizes, vehicles and barricades. The same per-run geometry drives rendering, collision, bullets and enemy navigation. Cover leaves 64 px gaps and a clear perimeter, and avoids the survivor’s current position. FIELD MANUAL has a preview of all ten scenes.
+Each new run shuffles all ten scenes without repeats; the order stays fixed during that run, including pause/resume. Every wave selects the next scene: quarantine block, red alley, abandoned hospital, ironworks, Blackwood, drowned docks, bone yard, slaughterhouse, biohazard lab, and Zero Ground. Scenes change ground and building materials, roof props, lighting, signage, and rain/mist/spores/embers. The scene is repainted only at wave changes; each wave also randomizes building positions and sizes, vehicles and barricades. The same per-run geometry drives rendering, collision, bullets and enemy navigation. Cover leaves 64 px gaps and a clear perimeter, and avoids the survivor’s current position. คู่มือ has a preview of all ten scenes.
 
 Reloads now use CC0 handling recordings by BMacZero: extraction, insertion and chamber handling follow reload progress, so pausing freezes the sequence and reload-speed upgrades adjust its timing. Each weapon card includes a reload preview. Ammo pickups also play an insertion sound.
 
