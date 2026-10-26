@@ -317,10 +317,6 @@ export class Game {
     p.moving = p.x !== oldX || p.y !== oldY; p.sprinting = !!sprint && p.moving;
     const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
     if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
-    if (input.autoAim && this.enemies.length) {
-      const nearest = this.enemies.filter(e => clearLine(p.x, p.y, e.x, e.y, 3, this.obstacles)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
-      if (nearest) p.angle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
-    }
     if (input.fire) this.shoot();
     this.spawnClock -= dt;
     if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); if (this.remaining === 1 && !this.bossWarned) { this.bossWarned = true; this.spawnClock = 3; this.emit('bossIncoming'); } }

@@ -26,7 +26,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง
 - Esc / P: พักเกม
-- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กด FIRE ค้างเพื่อเล็งศัตรูที่มองเห็นและยิงอัตโนมัติ กด R เพื่อรีโหลด
+- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กด FIRE ค้างแล้วลากเพื่อเล็งและยิงเอง กด R เพื่อรีโหลด
 
 จบแต่ละระลอกจะได้เลือกอัปเกรด 1 อย่าง กระสุนสำรอง 36 นัด และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
 
@@ -140,7 +140,7 @@ and restore accuracy.
 
 Touch-capable devices, including laptops with both mouse and touch, enable the
 on-screen controls automatically. The “สัมผัส” toolbar button toggles them on any
-device. Drag the left stick to move; hold and drag FIRE to aim and shoot in that direction (without dragging, automatic targeting is retained),
+device. Drag the left stick to move; hold and drag FIRE to aim and shoot in that direction,
 hold RUN to sprint, and tap R to reload. Each held action tracks its own finger,
 so walking and firing work together. Releasing or cancelling that finger stops
 only its action; pausing, switching modes or leaving the app resets all controls.
@@ -148,6 +148,6 @@ Buttons have at least 48px targets and the layout supports portrait and landscap
 
 Touch FIRE uses the initial finger position as its aiming center, so the thumb
 can slide outside the button while pointer capture keeps control. A 10px dead
-zone avoids accidental direction changes. A direction arrow and spread cone
+zone prevents firing before a direction is selected. No automatic target locking is used. A direction arrow and spread cone
 show the shot direction. Lifting the firing finger, cancelling touch, pausing
 or switching control mode clears the manual aim and stops firing.

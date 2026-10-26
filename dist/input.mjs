@@ -43,7 +43,7 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
   for (const [button, action] of [[fire, 'firing'], [sprint, 'sprinting']]) {
     button.addEventListener('pointerdown', e => {
       if (!canUse() || held.has(action) || e.button !== 0) return;
-      e.preventDefault(); held.set(action, e.pointerId); input[action] = true;
+      e.preventDefault(); held.set(action, e.pointerId); input[action] = action !== 'firing';
       if (action === 'firing') { fireOrigin = { x: e.clientX, y: e.clientY }; input.aim = null; }
       button.classList.add('held'); button.setPointerCapture(e.pointerId);
     });
@@ -58,7 +58,7 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     e.preventDefault();
     const dx = e.clientX - fireOrigin.x, dy = e.clientY - fireOrigin.y, length = Math.hypot(dx, dy);
     if (length < 10) return;
-    input.aim = { x: dx / length, y: dy / length };
+    input.aim = { x: dx / length, y: dy / length }; input.firing = true;
     const radius = Math.min(24, length);
     fire.style.setProperty('--aim-x', `${input.aim.x * radius}px`);
     fire.style.setProperty('--aim-y', `${input.aim.y * radius}px`);

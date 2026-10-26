@@ -416,7 +416,7 @@ function touchAim(player) {
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   const movement = keyboardMovement(keys);
-  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: firing || touchInput.firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim, autoAim: touchMode && !touchInput.aim && (touchInput.firing || keys.has(' ')) });
+  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: firing || touchInput.firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
   for (const e of game.events.splice(0)) {
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
