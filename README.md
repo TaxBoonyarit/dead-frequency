@@ -37,9 +37,9 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 | ปืน | ราคา | จุดเด่น |
 | --- | --- | --- |
 | M19 Sidearm | เริ่มต้น | ปืนพก 18 นัด สมดุล |
-| V9 Stinger | 90 CR | ปืนกลมือ 30 นัด ยิงรัว |
-| Breacher 12 | 140 CR | ลูกซอง 6 นัด กระจาย 6 เม็ดต่อการยิง |
-| Ranger R8 | 180 CR | ไรเฟิล 10 นัด ความเสียหายสูง |
+| V9 Stinger | 220 CR | ปืนกลมือ 30 นัด ยิงรัว |
+| Breacher 12 | 350 CR | ลูกซอง 6 นัด กระจาย 6 เม็ดต่อการยิง |
+| Ranger R8 | 450 CR | ไรเฟิล 10 นัด ความเสียหายสูง |
 
 ปืนใหม่มีกระสุนเต็มแมกกาซีน ใช้กระสุนสำรองร่วมกัน สลับปืนที่ซื้อแล้วได้ฟรี อัปเกรดมีผลกับทุกกระบอก เงินและปืนจะรีเซ็ตเมื่อเริ่มเล่นรอบใหม่
 
@@ -72,7 +72,7 @@ Zombie vocalizations are synthesized locally: walkers groan, runners snarl brief
 
 ## Eight-weapon arsenal and audio checks
 
-Added JUDGE .44 revolver (120 CR), VANGUARD A4 assault rifle (240 CR), BASTION M60 LMG (320 CR), and LONGWATCH .50 sniper (380 CR). They use the existing shared reserve and run-only ownership. Shop range labels explain close-range versus long-range tradeoffs.
+Added JUDGE .44 revolver (300 CR), VANGUARD A4 assault rifle (650 CR), BASTION M60 LMG (950 CR), and LONGWATCH .50 sniper (1200 CR). They use the existing shared reserve and run-only ownership. Shop range labels explain close-range versus long-range tradeoffs.
 
 Every weapon card has a sound preview; the shop also previews all four zombie types. Preview buttons enable sound after the click, cancel stale preview requests, and stop playback when closing the shop. Gunshots use four edited CC0 live-fire recordings by Tabasco (pistol, shotgun, rifle, SKS), with per-weapon pitch/level variations. See dist/audio/CREDITS.md for source and processing. Failed sample loads fall back to synthesis and can retry. Zombie voices remain procedural, with proximity and stereo positioning.
 

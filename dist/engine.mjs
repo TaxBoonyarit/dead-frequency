@@ -1,13 +1,13 @@
 export const W = 1280, H = 800;
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 1.4, pellets: 1, spread: .035, range: .9 },
-  { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 90, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
-  { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด ผลักและชะงักศัตรูในระยะประชิด', price: 140, damage: 18, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
-  { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 180, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
-  { id: 'revolver', name: 'JUDGE .44', type: 'รีวอลเวอร์', description: 'แรงต่อหนึ่งนัดสูง แมกเล็ก ประหยัดกระสุนสำหรับเป้าหมายตัวถึก', price: 120, damage: 100, interval: .55, mag: 6, reloadTime: 2.1, pellets: 1, spread: .025, range: 1.05 },
-  { id: 'assault', name: 'VANGUARD A4', type: 'ปืนจู่โจม', description: 'ยิงอัตโนมัติสมดุล เหมาะกับเวฟที่มีศัตรูหลายแบบ', price: 240, damage: 36, interval: .14, mag: 30, reloadTime: 2, pellets: 1, spread: .045, range: 1.1 },
-  { id: 'lmg', name: 'BASTION M60', type: 'ปืนกลหนัก', description: 'แมกใหญ่ 75 นัด ยิงกดฝูงต่อเนื่อง แต่รีโหลดช้า', price: 320, damage: 30, interval: .12, mag: 75, reloadTime: 3.4, pellets: 1, spread: .12, range: 1 },
-  { id: 'sniper', name: 'LONGWATCH .50', type: 'สไนเปอร์', description: 'พลังสูงสำหรับบอส ต้องเล็งให้แม่นและรอจังหวะยิง', price: 380, damage: 240, interval: 1.05, mag: 5, reloadTime: 2.8, pellets: 1, spread: .003, range: 1.7 },
+  { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
+  { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด ผลักและชะงักศัตรูในระยะประชิด', price: 350, damage: 18, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
+  { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 450, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
+  { id: 'revolver', name: 'JUDGE .44', type: 'รีวอลเวอร์', description: 'แรงต่อหนึ่งนัดสูง แมกเล็ก ประหยัดกระสุนสำหรับเป้าหมายตัวถึก', price: 300, damage: 100, interval: .55, mag: 6, reloadTime: 2.1, pellets: 1, spread: .025, range: 1.05 },
+  { id: 'assault', name: 'VANGUARD A4', type: 'ปืนจู่โจม', description: 'ยิงอัตโนมัติสมดุล เหมาะกับเวฟที่มีศัตรูหลายแบบ', price: 650, damage: 36, interval: .14, mag: 30, reloadTime: 2, pellets: 1, spread: .045, range: 1.1 },
+  { id: 'lmg', name: 'BASTION M60', type: 'ปืนกลหนัก', description: 'แมกใหญ่ 75 นัด ยิงกดฝูงต่อเนื่อง แต่รีโหลดช้า', price: 950, damage: 30, interval: .12, mag: 75, reloadTime: 3.4, pellets: 1, spread: .12, range: 1 },
+  { id: 'sniper', name: 'LONGWATCH .50', type: 'สไนเปอร์', description: 'พลังสูงสำหรับบอส ต้องเล็งให้แม่นและรอจังหวะยิง', price: 1200, damage: 240, interval: 1.05, mag: 5, reloadTime: 2.8, pellets: 1, spread: .003, range: 1.7 },
 ];
 export const BOSS_CHARGE = { speed: 360, duration: .65 };
 export const BOSSES = [
