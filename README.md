@@ -122,3 +122,26 @@ Runtime audio names match their purpose: `weapon-m19-sidearm.mp3`,
 `boss-screech.mp3`, `ambience-horror.mp3`. Original source filenames are mapped
 in `dist/audio/CREDITS.md`; unused source clips are kept in `audio-source/`
 and are not served or deployed.
+
+## Ammo and accuracy balance
+
+Start with 18 rounds loaded and 54 spare. Ammo boxes add 12 rounds, capped at
+120 spare; boxes stay on the ground when the reserve is full. Each wave break
+supplies 18 rounds and fills the magazine from that reserve rather than granting
+a second free magazine. New weapon purchases still include their first magazine.
+
+Standing shots have the tightest spread. Movement, sprinting and continuous fire
+widen the cone, which recovers when firing stops. Precision rifles retain tighter
+spread than SMGs/LMGs; shotgun pellets retain their fixed fan. The reticle expands
+with the current spread at the aim distance. Short bursts conserve ammunition
+and restore accuracy.
+
+## Touchscreen controls
+
+Touch-capable devices, including laptops with both mouse and touch, enable the
+on-screen controls automatically. The “สัมผัส” toolbar button toggles them on any
+device. Drag the left stick to move; hold FIRE for automatic targeting and firing,
+hold RUN to sprint, and tap R to reload. Each held action tracks its own finger,
+so walking and firing work together. Releasing or cancelling that finger stops
+only its action; pausing, switching modes or leaving the app resets all controls.
+Buttons have at least 48px targets and the layout supports portrait and landscape.

@@ -1,17 +1,18 @@
-import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS } from './engine.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
-import { controlKey, keyboardMovement } from './input.mjs';
+import { controlKey, keyboardMovement, bindTouchControls } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
-const coarse = matchMedia('(pointer:coarse)').matches;
+let touchMode = matchMedia('(any-pointer:coarse)').matches || navigator.maxTouchPoints > 0;
+let touchInput;
 const keys = new Set();
-let firing = false, pointer = null, joystick = { x: 0, y: 0 }, viewWidth = W, cameraX = 0;
+let firing = false, pointer = null, viewWidth = W, cameraX = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, soundscape = null, joystickId = null, pausedForManual = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
+let soundEnabled = false, audio = null, soundscape = null, pausedForManual = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -185,7 +186,7 @@ function render(now) {
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
   const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 340); beam.addColorStop(0, '#e2e6ac27'); beam.addColorStop(1, '#e2e6ac00');
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(5, 0); ctx.arc(0, 0, 340, -.38, .38); ctx.closePath(); ctx.fill(); ctx.restore();
-  if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(joystick.x, joystick.y) > .1) ? game.time * 14 : 0 }, true);
+  if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(touchInput.x, touchInput.y) > .1) ? game.time * 14 : 0 }, true);
   if (game.gun.reload > 0) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();
   }
@@ -198,10 +199,11 @@ function render(now) {
   if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, H); }
   // Subtle surveillance scan lines.
   ctx.fillStyle = '#0000000a'; for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, viewWidth, 1);
-  if (pointer && game.state === 'playing' && !coarse) {
+  if (pointer && game.state === 'playing' && !touchMode) {
     const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y;
-    ctx.strokeStyle = '#d5e69a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
-    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) line(ctx, [[x + dx * 10, y + dy * 10], [x + dx * 15, y + dy * 15]], '#d5e69a', 1);
+    const radius = Math.max(7, Math.min(36, Math.hypot(aim.x - p.x, aim.y - p.y) * Math.tan(game.accuracySpread() / 2)));
+    ctx.strokeStyle = '#d5e69a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) line(ctx, [[x + dx * (radius + 3), y + dy * (radius + 3)], [x + dx * (radius + 8), y + dy * (radius + 8)]], '#d5e69a', 1);
   }
 }
 function resize() {
@@ -251,13 +253,13 @@ function renderState() {
   const s = game.state;
   if (s === lastState) return;
   document.body.classList.toggle('game-active', s !== 'menu');
-  lastState = s; keys.clear(); firing = false; joystick.x = joystick.y = 0; $('joystick-knob').style.transform = '';
+  lastState = s; releaseInput();
   $('menu-overlay').hidden = s !== 'menu';
   $('state-overlay').hidden = ['menu', 'playing'].includes(s);
   $('hud').hidden = s === 'menu'; $('pause-button').hidden = s !== 'playing';
   $('touch-controls').hidden = s !== 'playing';
   if (s === 'playing') canvas.focus({ preventScroll: true });
-  canvas.style.cursor = s === 'playing' && !coarse ? 'none' : '';
+  canvas.style.cursor = s === 'playing' && !touchMode ? 'none' : '';
   $('feed-status').textContent = ({ menu: 'AWAITING SURVIVOR', playing: 'SURVIVOR ACTIVE', paused: 'FEED PAUSED', upgrade: 'AREA SECURED', dead: 'SIGNAL TERMINATED', won: 'EVACUATION COMPLETE' })[s];
   document.querySelectorAll('[data-difficulty], [data-character]').forEach(b => b.disabled = s !== 'menu');
   const c = $('state-content');
@@ -265,7 +267,7 @@ function renderState() {
     c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">กลับไปลุยต่อ <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>';
     $('resume-button').onclick = () => game.pause(); $('quit-button').onclick = returnMenu;
   } else if (s === 'upgrade') {
-    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">ซื้อปืนก่อน แล้วเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป<br>ฟื้นฟูเลือด 20 และรับกระสุนสำรอง 36 นัด</p><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">SELECT UPGRADE <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
+    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">ซื้อปืนก่อน แล้วเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป<br>ฟื้นฟูเลือด 20 · เสบียง ${AMMO.wave} นัด แล้วเติมแมกจากกระสุนสำรอง</p><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">SELECT UPGRADE <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
     $('wave-shop-button').onclick = openShop;
     c.querySelectorAll('[data-upgrade]').forEach(b => b.onclick = () => { game.upgrade(b.dataset.upgrade); tone(550, .15, 'sine', .04, 900); });
   } else if (s === 'dead' || s === 'won') {
@@ -378,27 +380,32 @@ window.addEventListener('keydown', e => {
   keys.add(key);
 });
 window.addEventListener('keyup', e => keys.delete(controlKey(e)));
-function releaseInput() { keys.clear(); firing = false; joystick = { x: 0, y: 0 }; $('joystick-knob').style.transform = ''; }
+function releaseInput() { keys.clear(); firing = false; touchInput?.reset(); }
 window.addEventListener('blur', () => { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); game.pause(); renderState(); } });
 function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
 function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth)); }
-canvas.addEventListener('pointermove', setPointer);
-canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || coarse) return; setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
-canvas.addEventListener('pointerup', () => firing = false); canvas.addEventListener('pointercancel', () => firing = false);
+canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') setPointer(e); });
+canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || e.pointerType === 'touch' || touchMode || game.state !== 'playing') return; setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
+for (const event of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(event, () => firing = false);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
-const stick = $('joystick');
-function dragStick(e) { const r = stick.getBoundingClientRect(), dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2, l = Math.hypot(dx, dy), scale = Math.min(1, 30 / (l || 1)); joystick = { x: dx * scale / 30, y: dy * scale / 30 }; $('joystick-knob').style.transform = `translate(${dx * scale}px,${dy * scale}px)`; }
-stick.addEventListener('pointerdown', e => { joystickId = e.pointerId; stick.setPointerCapture(e.pointerId); dragStick(e); });
-stick.addEventListener('pointermove', e => { if (e.pointerId === joystickId) dragStick(e); });
-for (const ev of ['pointerup','pointercancel','lostpointercapture']) stick.addEventListener(ev, () => { joystickId = null; joystick = { x: 0, y: 0 }; $('joystick-knob').style.transform = ''; });
-$('touch-fire').addEventListener('pointerdown', e => { e.preventDefault(); firing = true; $('touch-fire').setPointerCapture(e.pointerId); });
-for (const ev of ['pointerup','pointercancel','lostpointercapture']) $('touch-fire').addEventListener(ev, () => firing = false);
+touchInput = bindTouchControls({ stick: $('joystick'), knob: $('joystick-knob'), fire: $('touch-fire'), sprint: $('touch-sprint'), canUse: () => touchMode && game.state === 'playing' });
 $('touch-reload').onclick = () => game.reload();
+function updateTouchMode() {
+  releaseInput(); pointer = null;
+  document.body.classList.toggle('touch-mode', touchMode);
+  $('touch-mode-button').setAttribute('aria-pressed', String(touchMode));
+  canvas.style.cursor = game.state === 'playing' && !touchMode ? 'none' : '';
+}
+$('touch-mode-button').onclick = () => { touchMode = !touchMode; updateTouchMode(); };
+canvas.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' && !touchMode) { touchMode = true; updateTouchMode(); }
+});
+updateTouchMode();
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   const movement = keyboardMovement(keys);
-  game.update(dt, { x: movement.x + joystick.x, y: movement.y + joystick.y, sprint: keys.has('shift'), fire: firing || keys.has(' '), aim: coarse ? null : pointerAim, autoAim: coarse && firing });
+  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: firing || touchInput.firing || keys.has(' '), aim: touchMode ? null : pointerAim, autoAim: touchMode && (touchInput.firing || keys.has(' ')) });
   for (const e of game.events.splice(0)) {
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
@@ -410,7 +417,7 @@ function frame(now) {
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
     if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossEntrance(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave, game.sceneOrder).th}</small>`; tone(180, .6, 'sine', .05, 120); }
-    if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
+    if (e.type === 'pickup') { toast(e.pickup === 'health' ? `+${e.amount} เลือด / FIELD MEDKIT` : `+${e.amount} กระสุน / SUPPLY FOUND`); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
   }

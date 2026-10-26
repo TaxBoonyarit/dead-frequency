@@ -4,15 +4,16 @@ export const CHARACTERS = [
   { id: 'male', name: 'ผู้ชาย', role: 'GUARD', hp: 120, speed: 175, color: '#8a9b61' },
 ];
 export const W = 1280, H = 800;
+export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
 export const WEAPONS = [
-  { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .035, range: .9 },
-  { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
+  { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .024, range: .9 },
+  { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .075, range: .75 },
   { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด ผลักและชะงักศัตรูในระยะประชิด', price: 350, damage: 18, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
-  { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 450, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
-  { id: 'revolver', name: 'JUDGE .44', type: 'รีวอลเวอร์', description: 'แรงต่อหนึ่งนัดสูง แมกเล็ก ประหยัดกระสุนสำหรับเป้าหมายตัวถึก', price: 300, damage: 100, interval: .55, mag: 6, reloadTime: 2.1, pellets: 1, spread: .025, range: 1.05 },
-  { id: 'assault', name: 'VANGUARD A4', type: 'ปืนจู่โจม', description: 'ยิงอัตโนมัติสมดุล เหมาะกับเวฟที่มีศัตรูหลายแบบ', price: 650, damage: 36, interval: .14, mag: 30, reloadTime: 2, pellets: 1, spread: .045, range: 1.1 },
-  { id: 'lmg', name: 'BASTION M60', type: 'ปืนกลหนัก', description: 'แมกใหญ่ 75 นัด ยิงกดฝูงต่อเนื่อง แต่รีโหลดช้า', price: 950, damage: 30, interval: .12, mag: 75, reloadTime: 3.4, pellets: 1, spread: .12, range: 1 },
-  { id: 'sniper', name: 'LONGWATCH .50', type: 'สไนเปอร์', description: 'พลังสูงสำหรับบอส ต้องเล็งให้แม่นและรอจังหวะยิง', price: 1200, damage: 240, interval: 1.05, mag: 5, reloadTime: 2.8, pellets: 1, spread: .003, range: 1.7 },
+  { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 450, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .008, range: 1.25 },
+  { id: 'revolver', name: 'JUDGE .44', type: 'รีวอลเวอร์', description: 'แรงต่อหนึ่งนัดสูง แมกเล็ก ประหยัดกระสุนสำหรับเป้าหมายตัวถึก', price: 300, damage: 100, interval: .55, mag: 6, reloadTime: 2.1, pellets: 1, spread: .018, range: 1.05 },
+  { id: 'assault', name: 'VANGUARD A4', type: 'ปืนจู่โจม', description: 'ยิงอัตโนมัติสมดุล เหมาะกับเวฟที่มีศัตรูหลายแบบ', price: 650, damage: 36, interval: .14, mag: 30, reloadTime: 2, pellets: 1, spread: .032, range: 1.1 },
+  { id: 'lmg', name: 'BASTION M60', type: 'ปืนกลหนัก', description: 'แมกใหญ่ 75 นัด ยิงกดฝูงต่อเนื่อง แต่รีโหลดช้า', price: 950, damage: 30, interval: .12, mag: 75, reloadTime: 3.4, pellets: 1, spread: .10, range: 1 },
+  { id: 'sniper', name: 'LONGWATCH .50', type: 'สไนเปอร์', description: 'พลังสูงสำหรับบอส ต้องเล็งให้แม่นและรอจังหวะยิง', price: 1200, damage: 240, interval: 1.05, mag: 5, reloadTime: 2.8, pellets: 1, spread: .0015, range: 1.7 },
 ];
 export const BOSS_CHARGE = { speed: 360, duration: .65 };
 export const BOSSES = [
@@ -136,10 +137,10 @@ export class Game {
     this.state = 'menu'; this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
     const character = CHARACTERS.find(c => c.id === this.characterId) || CHARACTERS[1];
     this.characterId = character.id;
-    this.player = { x: 640, y: 410, angle: -.65, hp: character.hp, maxHp: character.hp, stamina: 100, speed: character.speed, invulnerable: 0 };
+    this.player = { x: 640, y: 410, angle: -.65, hp: character.hp, maxHp: character.hp, stamina: 100, speed: character.speed, moving: false, sprinting: false, invulnerable: 0 };
     this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
-    this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: 144, cooldown: 0, reload: 0 };
+    this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: AMMO.start, cooldown: 0, reload: 0, bloom: 0 };
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
@@ -167,7 +168,7 @@ export class Game {
     if (this.state !== 'upgrade' || !this.ownedWeapons.has(id) || id === this.weaponId) return false;
     this.ownedWeapons.set(this.weaponId, this.gun.ammo);
     const stats = this.weaponStats(id);
-    this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0 };
+    this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0, bloom: 0 };
     this.weaponId = id; return true;
   }
   start() { this.reset(this.difficulty); this.sceneOrder = shuffleScenes(this.random); this.state = 'playing'; this.nextWave(); }
@@ -196,19 +197,33 @@ export class Game {
     if (id === 'reload') this.weaponBonuses.reload *= .75;
     Object.assign(g, this.weaponStats(this.weaponId));
     p.hp = Math.min(p.maxHp, p.hp + (id === 'health' ? p.maxHp : 20));
-    g.ammo = g.mag; g.reload = 0; g.reserve += 36;
+    this.addReserve(AMMO.wave);
+    const refill = Math.min(g.mag - g.ammo, g.reserve);
+    g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
     this.state = 'playing'; this.nextWave();
+  }
+  addReserve(amount) {
+    const added = Math.max(0, Math.min(amount, AMMO.maxReserve - this.gun.reserve));
+    this.gun.reserve += added; return added;
+  }
+  accuracySpread() {
+    const p = this.player, g = this.gun;
+    const penalty = g.pellets > 1 ? (p.moving ? .2 : 0) + (p.sprinting ? .35 : 0)
+      : g.bloom * 2 + (p.moving ? .7 : 0) + (p.sprinting ? 1.4 : 0);
+    return g.spread * (1 + penalty);
   }
   shoot() {
     const g = this.gun, p = this.player;
     if (this.state !== 'playing' || this.clearClock > 0 || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
+    const cone = this.accuracySpread();
     for (let i = 0; i < g.pellets; i++) {
-      const spread = g.pellets === 1 ? (this.random() - .5) * g.spread : (i / (g.pellets - 1) - .5) * g.spread + (this.random() - .5) * .015;
+      const spread = g.pellets === 1 ? (this.random() - .5) * cone : (i / (g.pellets - 1) - .5) * cone + (this.random() - .5) * .015;
       const angle = p.angle + spread;
       // Sweep from the survivor so even point-blank targets are hit.
       this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: g.range, damage: g.damage, knockback: this.weaponId === 'shotgun' ? 6 : 0 });
     }
+    g.bloom = Math.min(1, g.bloom + .18);
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
     this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
   }
@@ -287,6 +302,7 @@ export class Game {
     if (this.state !== 'playing') return;
     dt = Math.min(dt, .05); this.time += dt; this.banner = Math.max(0, this.banner - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
     const p = this.player, g = this.gun;
+    g.bloom = Math.max(0, g.bloom - dt * 1.2);
     p.invulnerable = Math.max(0, p.invulnerable - dt); g.cooldown = Math.max(0, g.cooldown - dt);
     if (g.reload > 0) {
       g.reload = Math.max(0, g.reload - dt);
@@ -296,7 +312,9 @@ export class Game {
     if (length > 1) { dx /= length; dy /= length; }
     const sprint = input.sprint && length > 0 && p.stamina > 2;
     p.stamina = clamp(p.stamina + (sprint ? -29 : 20) * dt, 0, 100);
+    const oldX = p.x, oldY = p.y;
     move(p, dx * p.speed * (sprint ? 1.65 : 1) * dt, dy * p.speed * (sprint ? 1.65 : 1) * dt, 14, this.obstacles);
+    p.moving = p.x !== oldX || p.y !== oldY; p.sprinting = !!sprint && p.moving;
     const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
     if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
     if (input.autoAim && this.enemies.length) {
@@ -371,8 +389,10 @@ export class Game {
     for (const d of this.drops) {
       d.life -= dt;
       if (Math.hypot(d.x - p.x, d.y - p.y) < 34) {
-        if (d.type === 'health') p.hp = Math.min(p.maxHp, p.hp + 30); else g.reserve += 30;
-        d.life = 0; this.emit('pickup', { pickup: d.type });
+        const amount = d.type === 'health' ? Math.min(30, p.maxHp - p.hp) : this.addReserve(AMMO.pickup);
+        if (amount === 0) continue;
+        if (d.type === 'health') p.hp += amount;
+        d.life = 0; this.emit('pickup', { pickup: d.type, amount });
       }
     }
     this.drops = this.drops.filter(d => d.life > 0);

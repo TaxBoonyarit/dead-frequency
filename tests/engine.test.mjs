@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, blocked, OBSTACLES } from '../dist/engine.mjs';
+import { Game, AMMO, blocked, OBSTACLES } from '../dist/engine.mjs';
 
 function running() { const g = new Game(() => .5); g.start(); g.remaining = 999; g.spawnClock = 999; return g; }
 function tick(g, seconds, input = {}) { for (let i = 0; i < seconds * 60; i++) g.update(1 / 60, input); }
@@ -37,8 +37,8 @@ test('a completed wave offers valid upgrades and replenishes supplies', () => {
   const g = running(); g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
   assert.equal(g.state, 'upgrade'); assert.equal(g.choices.length, 3); assert.equal(new Set(g.choices.map(u => u.id)).size, 3);
   const wave = g.wave; g.upgrade('invalid'); assert.equal(g.state, 'upgrade');
-  g.player.hp = 35; const reserve = g.gun.reserve; g.upgrade(g.choices[0].id);
-  assert.equal(g.state, 'playing'); assert.equal(g.wave, wave + 1); assert.equal(g.gun.reserve, reserve + 36); assert.ok(g.player.hp >= 55);
+  g.player.hp = 35; const totalAmmo = g.gun.reserve + g.gun.ammo; g.upgrade(g.choices[0].id);
+  assert.equal(g.state, 'playing'); assert.equal(g.wave, wave + 1); assert.equal(g.gun.reserve + g.gun.ammo, totalAmmo + AMMO.wave); assert.ok(g.player.hp >= 55);
 });
 test('wave ten ends with evacuation, and restart clears the run', () => {
   const g = running(); g.wave = 10; g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
@@ -60,8 +60,8 @@ test('contact damage has a grace period and death stops the simulation', () => {
 test('pickups heal up to max health and add ammunition once', () => {
   const g = running(); g.player.hp = g.player.maxHp - 5; g.gun.reserve = 0;
   g.drops = ['health', 'ammo'].map(type => ({ x: g.player.x, y: g.player.y, type, life: 10 }));
-  g.update(.01); assert.equal(g.player.hp, g.player.maxHp); assert.equal(g.gun.reserve, 30); assert.equal(g.drops.length, 0);
-  g.update(.01); assert.equal(g.gun.reserve, 30);
+  g.update(.01); assert.equal(g.player.hp, g.player.maxHp); assert.equal(g.gun.reserve, AMMO.pickup); assert.equal(g.drops.length, 0);
+  g.update(.01); assert.equal(g.gun.reserve, AMMO.pickup);
 });
 test('zombies navigate around buildings toward a survivor', () => {
   const g = running(); g.player.x = 400; g.player.y = 200;
@@ -121,7 +121,7 @@ test('wave clear leaves three seconds to collect supplies and pauses its countdo
   assert.equal(g.events.filter(e=>e.type==='waveCleared').length,1);
   const ammo=g.gun.ammo;g.shoot();assert.equal(g.gun.ammo,ammo);
   const start=g.player.x;g.drops=[{x:start+25,y:g.player.y,type:'ammo',life:20}];const reserve=g.gun.reserve;
-  g.update(.05,{x:1});assert.ok(g.player.x>start);assert.equal(g.gun.reserve,reserve+30);
+  g.update(.05,{x:1});assert.ok(g.player.x>start);assert.equal(g.gun.reserve,reserve+AMMO.pickup);
   const clock=g.clearClock;g.pause();g.update(.05);assert.equal(g.clearClock,clock);g.pause();
   tick(g,2);assert.equal(g.state,'playing');tick(g,1.1);assert.equal(g.state,'upgrade');
   assert.equal(g.events.filter(e=>e.type==='waveCleared').length,1);
