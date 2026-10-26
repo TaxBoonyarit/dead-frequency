@@ -1,14 +1,19 @@
+export const SMG_RECORDING = 'moniker_subriquet-gunshot_smg_shot_1-203471';
+export const PISTOL_RELOAD_RECORDING = 'freesound_community-9mm-pistol-load-and-chamber-98830';
+export const PISTOL_RECORDING = 'freesound_community-9mm-pistol-shot-6349';
+export const SHOTGUN_RECORDING = 'dragon-studio-gunshot-372470';
 export const GUN_AUDIO = {
-  pistol: ['shot-pistol', 1, .66], smg: ['shot-smg', 1, .48], shotgun: ['shot-shotgun', 1, .78],
+  pistol: [PISTOL_RECORDING, 1, .66], smg: [SMG_RECORDING, 1, .48], shotgun: [SHOTGUN_RECORDING, 1, .78],
   rifle: ['shot-rifle', 1, .69], revolver: ['shot-revolver', 1, .72], assault: ['shot-assault', 1, .57],
   lmg: ['shot-lmg', 1, .63], sniper: ['shot-sniper', 1, .81],
 };
 export const GUN_RECORDINGS = {
-  pistol: 'Walther PPQ · 9mm', smg: 'Carl Gustav M45 · SMG', shotgun: 'Benelli Nova · 12 gauge',
+  pistol: 'Freesound Community · 9mm pistol shot', smg: 'Moniker Subriquet · SMG shot', shotgun: 'Dragon Studio · gunshot-372470',
   rifle: 'SKS · semi-auto', revolver: 'Smith & Wesson 642 · revolver', assault: 'AR-15 · carbine',
   lmg: 'AK-47 · automatic rifle', sniper: 'Tikka T3 · bolt-action',
 };
-export const ZOMBIE_AUDIO = { walker: [1, 2], runner: [3, 4], brute: [5, 6], boss: [7, 8] };
+export const ZOMBIE_RECORDING = 'freesound_community-zombie-6851';
+export const BOSS_RECORDING = 'u_klymi2aebc-zombie-screech-sound-effect-312865-446996';
 // Local firearm recordings and procedural horror ambience; no background timers.
 export class HorrorAudio {
   constructor(context) {
@@ -16,7 +21,7 @@ export class HorrorAudio {
     this.master.gain.value = 0; this.master.connect(context.destination);
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
     this.reloadStep = -1; this.gunBuffers = new Map(); this.gunLoading = null;
-    this.lastGrowl = new Map(); this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
+    this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
     const data = this.noise.getChannelData(0);
@@ -43,8 +48,8 @@ export class HorrorAudio {
   }
   loadWeaponAudio() {
     if (this.gunLoading) return this.gunLoading;
-    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt', ...Object.values(ZOMBIE_AUDIO).flat().map(id => `zombie-${id}`)].filter(id => !this.gunBuffers.has(id)).map(async id => {
-      const response = await fetch(new URL(`./audio/${id}.wav`, import.meta.url));
+    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt', PISTOL_RELOAD_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING].filter(id => !this.gunBuffers.has(id)).map(async id => {
+      const response = await fetch(new URL(`./audio/${id}.${[ZOMBIE_RECORDING, BOSS_RECORDING, SHOTGUN_RECORDING, PISTOL_RECORDING, PISTOL_RELOAD_RECORDING, SMG_RECORDING].includes(id) ? 'mp3' : 'wav'}`, import.meta.url));
       if (!response.ok) throw new Error('Audio unavailable');
       const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
       this.gunBuffers.set(id, buffer);
@@ -64,11 +69,13 @@ export class HorrorAudio {
     osc.start(); osc.stop(c.currentTime + buffer.duration / osc.playbackRate.value);
     return true;
   }
-  reloadEffect(id, step, delay = 0) {
+  reloadEffect(id, step, delay = 0, duration) {
     if (!this.enabled) return false;
-    const key = step === 0 ? 'reload-out' : step === 1 ? 'reload-in' : 'reload-bolt';
+    const fullReload = id === 'pistol' && this.gunBuffers.has(PISTOL_RELOAD_RECORDING);
+    if (fullReload && step > 0) return true;
+    const key = fullReload ? PISTOL_RELOAD_RECORDING : step === 0 ? 'reload-out' : step === 1 ? 'reload-in' : 'reload-bolt';
     const buffer = this.gunBuffers.get(key), c = this.context;
-    const rate = id === 'lmg' ? .75 : id === 'shotgun' || id === 'revolver' ? .9 : id === 'sniper' ? .8 : 1.15;
+    const rate = fullReload ? buffer.duration / (duration || buffer.duration) : id === 'lmg' ? .75 : id === 'shotgun' || id === 'revolver' ? .9 : id === 'sniper' ? .8 : 1.15;
     if (!buffer) { this.tone(step === 0 ? 160 : 310, .08, 'triangle', .035, 90, delay); return false; }
     const osc = c.createBufferSource(), gain = c.createGain(); osc.buffer = buffer; osc.playbackRate.value = rate;
     gain.gain.value = .4; osc.connect(gain); gain.connect(this.master);
@@ -79,7 +86,7 @@ export class HorrorAudio {
   reloadProgress(id, remaining, duration) {
     if (remaining <= 0) { this.reloadStep = -1; return; }
     const progress = 1 - remaining / duration, step = progress >= .78 ? 2 : progress >= .4 ? 1 : 0;
-    if (step > this.reloadStep) { this.reloadStep = step; this.reloadEffect(id, step); }
+    if (step > this.reloadStep) { this.reloadStep = step; this.reloadEffect(id, step, 0, duration); }
   }
   stopVoices() {
     for (const { osc, gain, extras = [] } of this.voices) { osc.onended = null; osc.stop(); osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); }
@@ -87,15 +94,11 @@ export class HorrorAudio {
   }
   zombieGrowl(type, distance, horizontal = 0) {
     if (!this.enabled) return;
-    const choices = ZOMBIE_AUDIO[type] || ZOMBIE_AUDIO.walker;
-    const previous = this.lastGrowl.get(type);
-    const available = choices.filter(id => this.gunBuffers.has(`zombie-${id}`));
-    if (available.length) {
-      const id = available.find(id => id !== previous) || available[0];
-      this.lastGrowl.set(type, id);
+    const recorded = this.gunBuffers.get(type === 'boss' ? BOSS_RECORDING : ZOMBIE_RECORDING);
+    if (recorded) {
       const c = this.context, osc = c.createBufferSource(), gain = c.createGain(), extras = [];
-      osc.buffer = this.gunBuffers.get(`zombie-${id}`);
-      osc.playbackRate.value = type === 'boss' ? .8 : type === 'brute' ? .9 : 1;
+      osc.buffer = recorded;
+      osc.playbackRate.value = type === 'brute' ? .9 : 1;
       gain.gain.value = .06 + .34 * Math.max(0, 1 - distance / 560);
       osc.connect(gain);
       if (c.createStereoPanner) {
@@ -176,13 +179,20 @@ export class HorrorAudio {
       }
       if (nearest) {
         this.zombieGrowl(nearest.type, distance, nearest.x - player.x);
-        this.nextGrowl = t + (nearest.type === 'runner' ? 1.5 : 2.6) + Math.random() * 1.2;
+        const duration = nearest.type === 'boss' ? (this.gunBuffers.get(BOSS_RECORDING)?.duration || 1.9) : 0;
+        this.nextGrowl = t + Math.max(duration + 1, nearest.type === 'runner' ? 1.5 : 2.6) + Math.random() * 1.2;
       }
     }
     if (t >= this.nextCreak) {
       this.tone(180 + Math.random() * 90, 1.8, 'triangle', .012, 75);
       this.nextCreak = t + 7 + Math.random() * 6;
     }
+  }
+  bossEntrance() {
+    if (!this.enabled) return;
+    const recorded = this.zombieGrowl('boss', 0);
+    this.nextGrowl = this.context.currentTime + (this.gunBuffers.get(BOSS_RECORDING)?.duration || 1.9) + 1;
+    return recorded;
   }
   bossWarning() {
     this.tone(110, 1.5, 'sawtooth', .035, 41);

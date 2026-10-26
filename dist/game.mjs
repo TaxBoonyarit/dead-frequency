@@ -1,4 +1,4 @@
-import { Game, W, H, OBSTACLES, WEAPONS, BOSSES } from './engine.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement } from './input.mjs';
@@ -24,8 +24,8 @@ function rand() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 214748
 function rect(c, x, y, w, h, color) { c.fillStyle = color; c.fillRect(x, y, w, h); }
 function circle(c, x, y, r, color) { c.fillStyle = color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); }
 function line(c, points, color, width = 1) { c.strokeStyle = color; c.lineWidth = width; c.beginPath(); points.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y)); c.stroke(); }
-let activeScene = sceneForWave(1);
-function paintGround(scene = activeScene, target = bg) {
+let activeScene = sceneForWave(1), activeObstacles = game.obstacles;
+function paintGround(scene = activeScene, target = bg, obstacles = game.obstacles) {
   const bg = target; seed = 17;
 
   rect(bg, 0, 0, W, H, scene.ground);
@@ -52,7 +52,7 @@ function paintGround(scene = activeScene, target = bg) {
     if (i % 3 === 0) { bg.save(); bg.translate(x, y); bg.rotate(rand() * 6); rect(bg, 0, 0, 5 + rand() * 5, 4, '#a8ab8b55'); bg.restore(); }
   }
   sceneFloor(bg, scene, W, H);
-  for (const o of OBSTACLES) {
+  for (const o of obstacles) {
     rect(bg, o.x + 12, o.y + 16, o.w + 8, o.h + 7, '#060d0b66');
     if (o.kind === 'building') {
       rect(bg, o.x - 4, o.y - 4, o.w + 8, o.h + 8, '#121c17');
@@ -82,7 +82,7 @@ function paintGround(scene = activeScene, target = bg) {
       for (let x = o.x + 4; x < o.x + o.w - 4; x += 18) { rect(bg, x, o.y + 3, 14, 10, '#727653'); rect(bg, x + 4, o.y + 15, 12, 9, '#404d35'); }
     }
   }
-  sceneStructures(bg, scene, OBSTACLES);
+  sceneStructures(bg, scene, obstacles);
   // Wire fence and pools of sodium light.
   for (const [x, y, length] of [[30, 44, 310], [938, 760, 290]]) {
     line(bg, [[x, y], [x + length, y]], '#7b8c6066', 2);
@@ -106,9 +106,9 @@ for (const [i, type] of ['walker', 'runner', 'brute', 'boss'].entries()) {
 }
 SCENES.forEach((scene, index) => {
   const figure=document.createElement('figure'), image=document.createElement('canvas'), caption=document.createElement('figcaption');
-  figure.className='scene-card'; image.width=320; image.height=200; image.setAttribute('aria-label', `ด่าน ${index+1} ${scene.th}`);
-  const map=image.getContext('2d'); map.scale(.25,.25); paintGround(scene,map);
-  caption.textContent=`${String(index+1).padStart(2,'0')} / ${scene.th}`; figure.append(image,caption); $('scene-gallery').append(figure);
+  figure.className='scene-card'; image.width=320; image.height=200; image.setAttribute('aria-label', `ฉาก ${scene.th}`);
+  const map=image.getContext('2d'); map.scale(.25,.25); paintGround(scene,map,OBSTACLES);
+  caption.textContent=`${scene.th} · สุ่มในแต่ละรอบ`; figure.append(image,caption); $('scene-gallery').append(figure);
 });
 const bossGallery = $('boss-gallery');
 BOSSES.forEach((boss, index) => {
@@ -136,11 +136,14 @@ function drawBody(e, isPlayer = false) {
   circle(ctx, 0, 0, 15, '#080e0b44'); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   rect(ctx, -9 + step, -8, 13, 6, '#202d24'); rect(ctx, -9 - step, 3, 13, 6, '#202d24');
   if (isPlayer) {
-    circle(ctx, 0, 0, 12, '#687d52'); rect(ctx, -9, -9, 9, 18, '#364b35');
+    const character = CHARACTERS.find(c => c.id === game.characterId);
+    circle(ctx, 0, 0, 12, character.color); rect(ctx, -9, -9, 9, 18, '#364b35');
     circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
     const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
     rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
-    circle(ctx, 1, 0, 8, '#a1a97b'); circle(ctx, 0, -1, 7, '#6e8158');
+    circle(ctx, 1, 0, 8, '#c2ad88');
+    if (game.characterId === 'female') { circle(ctx, -3, 0, 7, '#302920'); circle(ctx, -11, 0, 4, '#302920'); }
+    else { circle(ctx, 0, -1, 7, character.color); line(ctx, [[-5, 0], [5, 0]], '#d6d9ae88', 2); }
     line(ctx, [[-3, -6], [4, -4]], '#bac38c88', 2);
     if (game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
       ctx.fillStyle = '#ffe4a2'; ctx.beginPath(); ctx.moveTo(31, -4); ctx.lineTo(48, -9); ctx.lineTo(42, 0); ctx.lineTo(49, 6); ctx.lineTo(31, 3); ctx.fill();
@@ -150,8 +153,8 @@ function drawBody(e, isPlayer = false) {
 }
 const demo = [{x:431,y:230,angle:1.1},{x:800,y:160,angle:1.8},{x:891,y:448,angle:3.2},{x:384,y:616,angle:-.8},{x:1040,y:380,angle:3.1},{x:655,y:708,angle:-1.4}].map(e => ({...e,hp:65,maxHp:65,type:'walker',phase:0}));
 function render(now) {
-  const nextScene = sceneForWave(game.wave);
-  if (nextScene !== activeScene) { activeScene = nextScene; paintGround(); $('scene-label').textContent = activeScene.name; }
+  const nextScene = sceneForWave(game.wave, game.sceneOrder);
+  if (nextScene !== activeScene || activeObstacles !== game.obstacles) { activeScene = nextScene; activeObstacles = game.obstacles; paintGround(); $('scene-label').textContent = activeScene.name; }
   const p = game.player;
   cameraX = cameraOffset(p.x, viewWidth);
   ctx.clearRect(0, 0, canvas.width, H); rect(ctx, 0, 0, canvas.width, H, '#1c251b');
@@ -256,7 +259,7 @@ function renderState() {
   if (s === 'playing') canvas.focus({ preventScroll: true });
   canvas.style.cursor = s === 'playing' && !coarse ? 'none' : '';
   $('feed-status').textContent = ({ menu: 'AWAITING SURVIVOR', playing: 'SURVIVOR ACTIVE', paused: 'FEED PAUSED', upgrade: 'AREA SECURED', dead: 'SIGNAL TERMINATED', won: 'EVACUATION COMPLETE' })[s];
-  document.querySelectorAll('[data-difficulty]').forEach(b => b.disabled = s !== 'menu');
+  document.querySelectorAll('[data-difficulty], [data-character]').forEach(b => b.disabled = s !== 'menu');
   const c = $('state-content');
   if (s === 'paused') {
     c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">กลับไปลุยต่อ <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>';
@@ -323,7 +326,7 @@ async function previewSound(id, zombie = false, reload = false) {
   await soundscape.loadWeaponAudio();
   if (request !== previewRequest || !$('armory').open || !soundEnabled) return;
   soundscape.stopVoices();
-  if (reload) { const duration = game.weaponStats(id).reloadTime; [0,.4,.78].forEach((part, step) => soundscape.reloadEffect(id, step, duration * part)); $('shop-feedback').textContent = 'กำลังลองเสียงรีโหลด · ถอด / เติม / ขึ้นลำ'; }
+  if (reload) { const duration = game.weaponStats(id).reloadTime; [0,.4,.78].forEach((part, step) => soundscape.reloadEffect(id, step, duration * part, duration)); $('shop-feedback').textContent = 'กำลังลองเสียงรีโหลด · ถอด / เติม / ขึ้นลำ'; }
   else if (zombie) { const recorded = soundscape.zombieGrowl(id, 70, 0); $('shop-feedback').textContent = recorded ? `เสียงซอมบี้บันทึกจริง · ${id}` : 'โหลดเสียงซอมบี้ไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
   else { const recorded = soundscape.gunshot(id); $('shop-feedback').textContent = recorded ? `เสียงบันทึกจริง · ${GUN_RECORDINGS[id]}` : 'โหลดเสียงบันทึกไม่สำเร็จ · กำลังใช้เสียงสำรอง'; }
 }
@@ -334,6 +337,15 @@ $('armory').addEventListener('close', () => {
   previewRequest++; soundscape?.stopVoices();
   if (pausedForShop && game.state === 'paused') { game.pause(); renderState(); }
   pausedForShop = false;
+});
+const characterOptions = $('character-options');
+characterOptions.innerHTML = CHARACTERS.map(c => `<button type="button" data-character="${c.id}" aria-pressed="${game.characterId === c.id}" style="--character-color:${c.color}"><span class="character-symbol" aria-hidden="true">${c.id === 'female' ? '♀' : '♂'}</span><strong>${c.name} <small>${c.role}</small></strong><span>เลือด ${c.hp} HP</span><span>ความเร็ว ${c.speed} · ${c.id === 'female' ? 'วิ่งเร็ว' : 'วิ่งช้ากว่า'}</span></button>`).join('');
+characterOptions.querySelectorAll('[data-character]').forEach(button => {
+  button.onclick = () => {
+    if (!game.selectCharacter(button.dataset.character)) return;
+    characterOptions.querySelectorAll('[data-character]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.character === game.characterId)));
+    updateHUD();
+  };
 });
 function startGame() { initAudio(); game.start(); renderState(); canvas.focus({ preventScroll: true }); updateHUD(); }
 function returnMenu() { storeBest(); game.reset(game.difficulty); renderState(); updateHUD(); $('start-button').focus({ preventScroll: true }); }
@@ -389,13 +401,13 @@ function frame(now) {
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
-    if (e.type === 'reload') { soundscape?.reloadEffect(e.weapon, 0); if (soundscape) soundscape.reloadStep = 0; }
+    if (e.type === 'reload') { soundscape?.reloadEffect(e.weapon, 0, 0, e.duration); if (soundscape) soundscape.reloadStep = 0; }
     if (e.type === 'loaded') tone(620, .04, 'triangle', .015, 310);
     if (e.type === 'waveCleared') { $('wave-banner').innerHTML = 'AREA SECURED<small>พื้นที่ปลอดภัย · เดินเก็บเสบียงก่อนขึ้นหน้าถัดไป</small>'; }
     if (e.type === 'bossIncoming') { game.banner = 3; $('wave-banner').innerHTML = 'BOSS INCOMING<small>บอสกำลังมา · เตรียมอาวุธ</small>'; }
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
-    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossWarning(); }
-    if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave).th}</small>`; tone(180, .6, 'sine', .05, 120); }
+    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossEntrance(); }
+    if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave, game.sceneOrder).th}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'health' ? '+30 เลือด / FIELD MEDKIT' : '+30 กระสุน / SUPPLY FOUND'); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);

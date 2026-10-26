@@ -10,7 +10,15 @@ export const SCENES = [
   { name:'BIOHAZARD LAB', th:'ห้องทดลองเชื้อ', ground:'#273326', road:'#39452d', roof:'#53613e', accent:'#c8e976', kind:'lab', weather:'spores' },
   { name:'ZERO GROUND', th:'รังต้นกำเนิด', ground:'#2b2035', road:'#3d2e47', roof:'#5a3e5b', accent:'#ee9a8d', kind:'nest', weather:'embers' },
 ];
-export function sceneForWave(wave) { return SCENES[Math.max(0, Math.min(9, Math.floor(wave || 1)-1))]; }
+export function shuffleScenes(random = Math.random) {
+  const order = [...SCENES];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+export function sceneForWave(wave, order = SCENES) { return order[Math.max(0, Math.min(order.length - 1, Math.floor(wave || 1)-1))]; }
 function line(c,x,y,x2,y2,color,width=1){c.strokeStyle=color;c.lineWidth=width;c.beginPath();c.moveTo(x,y);c.lineTo(x2,y2);c.stroke();}
 export function sceneFloor(c,s,w,h){
   c.save();

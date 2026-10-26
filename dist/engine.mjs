@@ -1,6 +1,11 @@
+import { SCENES, shuffleScenes } from './scenes.mjs';
+export const CHARACTERS = [
+  { id: 'female', name: 'ผู้หญิง', role: 'SCOUT', hp: 80, speed: 225, color: '#709eae' },
+  { id: 'male', name: 'ผู้ชาย', role: 'GUARD', hp: 120, speed: 175, color: '#8a9b61' },
+];
 export const W = 1280, H = 800;
 export const WEAPONS = [
-  { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 1.4, pellets: 1, spread: .035, range: .9 },
+  { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .035, range: .9 },
   { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .09, range: .75 },
   { id: 'shotgun', name: 'BREACHER 12', type: 'ลูกซอง', description: 'กระจาย 6 เม็ดต่อหนึ่งนัด ผลักและชะงักศัตรูในระยะประชิด', price: 350, damage: 18, interval: .7, mag: 6, reloadTime: 1.8, pellets: 6, spread: .28, range: .38 },
   { id: 'rifle', name: 'RANGER R8', type: 'ไรเฟิล', description: 'ยิงหนักและแม่นยำ เหมาะกับซอมบี้ตัวถึกในระยะไกล', price: 450, damage: 80, interval: .38, mag: 10, reloadTime: 1.9, pellets: 1, spread: .012, range: 1.25 },
@@ -25,6 +30,24 @@ export const OBSTACLES = [
   { x: 462, y: 535, w: 105, h: 28, kind: 'barrier' },
   { x: 725, y: 285, w: 105, h: 28, kind: 'barrier' },
 ];
+export function randomObstacles(random = Math.random, player = { x: 640, y: 410 }) {
+  const layout = [];
+  for (const base of OBSTACLES) {
+    for (let attempt = 0; attempt < 32; attempt++) {
+      const building = base.kind === 'building';
+      const o = { ...base, x: Math.round(base.x + (random() - .5) * (building ? 110 : 240)),
+        y: Math.round(base.y + (random() - .5) * (building ? 60 : 140)),
+        w: building ? Math.round(base.w + (random() - .5) * 80) : base.w,
+        h: building ? Math.round(base.h + (random() - .5) * 50) : base.h };
+      // Open perimeter and 64px gaps leave room for the largest enemy to navigate.
+      if (o.x < 64 || o.y < 64 || o.x + o.w > W - 64 || o.y + o.h > H - 64) continue;
+      if (player.x > o.x - 64 && player.x < o.x + o.w + 64 && player.y > o.y - 64 && player.y < o.y + o.h + 64) continue;
+      if (layout.some(b => o.x < b.x + b.w + 64 && o.x + o.w + 64 > b.x && o.y < b.y + b.h + 64 && o.y + o.h + 64 > b.y)) continue;
+      layout.push(o); break;
+    }
+  }
+  return layout;
+}
 export const UPGRADES = [
   { id: 'damage', icon: '↗', title: 'HOLLOW POINT', th: 'กระสุนเจาะเกราะ', detail: 'เพิ่มความเสียหาย 35%' },
   { id: 'speed', icon: '»', title: 'LIGHT FOOTED', th: 'ก้าวให้ไวกว่าเดิม', detail: 'เพิ่มความเร็วเคลื่อนที่ 15%' },
@@ -34,18 +57,18 @@ export const UPGRADES = [
   { id: 'reload', icon: '⟳', title: 'SLEIGHT OF HAND', th: 'รีโหลดอย่างชำนาญ', detail: 'ลดเวลารีโหลด 25%' },
 ];
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
-export function blocked(x, y, r = 13) {
+export function blocked(x, y, r = 13, obstacles = OBSTACLES) {
   if (x < r || x > W - r || y < r || y > H - r) return true;
-  return OBSTACLES.some(o => x + r > o.x && x - r < o.x + o.w && y + r > o.y && y - r < o.y + o.h);
+  return obstacles.some(o => x + r > o.x && x - r < o.x + o.w && y + r > o.y && y - r < o.y + o.h);
 }
-function move(body, dx, dy, r) {
-  if (!blocked(body.x + dx, body.y, r)) body.x += dx;
-  if (!blocked(body.x, body.y + dy, r)) body.y += dy;
+function move(body, dx, dy, r, obstacles) {
+  if (!blocked(body.x + dx, body.y, r, obstacles)) body.x += dx;
+  if (!blocked(body.x, body.y + dy, r, obstacles)) body.y += dy;
 }
-function clearLine(x1, y1, x2, y2, radius = 3) {
-  if (blocked(x1, y1, radius) || blocked(x2, y2, radius)) return false;
+function clearLine(x1, y1, x2, y2, radius = 3, obstacles = OBSTACLES) {
+  if (blocked(x1, y1, radius, obstacles) || blocked(x2, y2, radius, obstacles)) return false;
   // Sweep the body's full bounds along the segment, including obstacle corners.
-  for (const o of OBSTACLES) {
+  for (const o of obstacles) {
     let enter = 0, leave = 1;
     for (const [start, delta, low, high] of [
       [x1, x2 - x1, o.x - radius, o.x + o.w + radius],
@@ -61,31 +84,33 @@ function clearLine(x1, y1, x2, y2, radius = 3) {
   }
   return true;
 }
-const navigationGraphs = new Map();
-function navigationGraph(radius) {
-  if (navigationGraphs.has(radius)) return navigationGraphs.get(radius);
+const navigationGraphs = new WeakMap();
+function navigationGraph(radius, obstacles) {
+  if (!navigationGraphs.has(obstacles)) navigationGraphs.set(obstacles, new Map());
+  const graphs = navigationGraphs.get(obstacles);
+  if (graphs.has(radius)) return graphs.get(radius);
   const padding = radius + 1;
-  const nodes = OBSTACLES.flatMap(o => [
+  const nodes = obstacles.flatMap(o => [
     { x: o.x - padding, y: o.y - padding }, { x: o.x + o.w + padding, y: o.y - padding },
     { x: o.x - padding, y: o.y + o.h + padding }, { x: o.x + o.w + padding, y: o.y + o.h + padding },
-  ]).filter(n => !blocked(n.x, n.y, radius));
+  ]).filter(n => !blocked(n.x, n.y, radius, obstacles));
   const edges = nodes.map(() => []);
   for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
     const a = nodes[i], b = nodes[j];
-    if (clearLine(a.x, a.y, b.x, b.y, radius)) {
+    if (clearLine(a.x, a.y, b.x, b.y, radius, obstacles)) {
       const cost = Math.hypot(a.x - b.x, a.y - b.y);
       edges[i].push({ index: j, cost }); edges[j].push({ index: i, cost });
     }
   }
-  const graph = { nodes, edges }; navigationGraphs.set(radius, graph); return graph;
+  const graph = { nodes, edges }; graphs.set(radius, graph); return graph;
 }
-function approachPoint(from, player, radius) {
+function approachPoint(from, player, radius, obstacles) {
   const dx = from.x - player.x, dy = from.y - player.y, distance = Math.hypot(dx, dy);
   // Stop within attack range; the player can stand closer to a wall than a brute.
   const stop = radius + 12;
   if (distance <= stop) return from;
   const radial = { x: player.x + dx / distance * stop, y: player.y + dy / distance * stop };
-  if (clearLine(from.x, from.y, radial.x, radial.y, radius)) return radial;
+  if (clearLine(from.x, from.y, radial.x, radial.y, radius, obstacles)) return radial;
   // A large enemy may need to approach a wall-hugging survivor from the side.
   // Seed navigation with every visible point in melee range, not a blocked radial endpoint.
   let best = radial, cost = Infinity;
@@ -93,7 +118,7 @@ function approachPoint(from, player, radius) {
     const angle = i * Math.PI / 16;
     const point = { x: player.x + Math.cos(angle) * stop, y: player.y + Math.sin(angle) * stop };
     const length = Math.hypot(point.x - from.x, point.y - from.y);
-    if (length < cost && clearLine(from.x, from.y, point.x, point.y, radius)) { best = point; cost = length; }
+    if (length < cost && clearLine(from.x, from.y, point.x, point.y, radius, obstacles)) { best = point; cost = length; }
   }
   return best;
 }
@@ -107,8 +132,11 @@ export class Game {
   reset(difficulty = 'survivor') {
     this.difficulty = difficulty;
     this.scale = difficulty === 'recruit' ? .72 : difficulty === 'nightmare' ? 1.35 : 1;
+    this.sceneOrder = SCENES; this.obstacles = OBSTACLES;
     this.state = 'menu'; this.wave = 0; this.score = 0; this.kills = 0; this.time = 0;
-    this.player = { x: 640, y: 410, angle: -.65, hp: 100, maxHp: 100, stamina: 100, speed: 190, invulnerable: 0 };
+    const character = CHARACTERS.find(c => c.id === this.characterId) || CHARACTERS[1];
+    this.characterId = character.id;
+    this.player = { x: 640, y: 410, angle: -.65, hp: character.hp, maxHp: character.hp, stamina: 100, speed: character.speed, invulnerable: 0 };
     this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: 144, cooldown: 0, reload: 0 };
@@ -116,6 +144,10 @@ export class Game {
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
     this.choices = []; this.clearClock = null;
+  }
+  selectCharacter(id) {
+    if (this.state !== 'menu' || !CHARACTERS.some(c => c.id === id)) return false;
+    this.characterId = id; this.reset(this.difficulty); return true;
   }
   emit(type, data = {}) { this.events.push({ type, ...data }); }
   weaponStats(id) {
@@ -138,9 +170,11 @@ export class Game {
     this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0 };
     this.weaponId = id; return true;
   }
-  start() { this.reset(this.difficulty); this.state = 'playing'; this.nextWave(); }
+  start() { this.reset(this.difficulty); this.sceneOrder = shuffleScenes(this.random); this.state = 'playing'; this.nextWave(); }
   nextWave() {
     this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
+    this.obstacles = randomObstacles(this.random, this.player);
+    this.paths.clear(); this.pathClock = 0; this.drops = []; this.stains = [];
     this.clearClock = null; this.bullets = [];
     this.spawnClock = .3; this.banner = 3; this.bossWarned = false;
     this.emit('wave', { wave: this.wave });
@@ -149,7 +183,7 @@ export class Game {
   reload() {
     const g = this.gun;
     if (this.state !== 'playing' || g.reload > 0 || g.ammo === g.mag || g.reserve <= 0) return;
-    g.reload = g.reloadTime; this.emit('reload', { weapon: this.weaponId });
+    g.reload = g.reloadTime; this.emit('reload', { weapon: this.weaponId, duration: g.reloadTime });
   }
   upgrade(id) {
     if (this.state !== 'upgrade' || !this.choices.some(c => c.id === id)) return;
@@ -235,10 +269,10 @@ export class Game {
     this.remaining--;
   }
   updatePaths(radius) {
-    const graph = navigationGraph(radius), visited = new Set();
+    const graph = navigationGraph(radius, this.obstacles), visited = new Set();
     const costs = graph.nodes.map(n => {
-      const target = approachPoint(n, this.player, radius);
-      return clearLine(n.x, n.y, target.x, target.y, radius) ? Math.hypot(n.x - target.x, n.y - target.y) : Infinity;
+      const target = approachPoint(n, this.player, radius, this.obstacles);
+      return clearLine(n.x, n.y, target.x, target.y, radius, this.obstacles) ? Math.hypot(n.x - target.x, n.y - target.y) : Infinity;
     });
     for (let i = 0; i < graph.nodes.length; i++) {
       let current = -1;
@@ -262,11 +296,11 @@ export class Game {
     if (length > 1) { dx /= length; dy /= length; }
     const sprint = input.sprint && length > 0 && p.stamina > 2;
     p.stamina = clamp(p.stamina + (sprint ? -29 : 20) * dt, 0, 100);
-    move(p, dx * p.speed * (sprint ? 1.65 : 1) * dt, dy * p.speed * (sprint ? 1.65 : 1) * dt, 14);
+    move(p, dx * p.speed * (sprint ? 1.65 : 1) * dt, dy * p.speed * (sprint ? 1.65 : 1) * dt, 14, this.obstacles);
     const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
     if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
     if (input.autoAim && this.enemies.length) {
-      const nearest = this.enemies.filter(e => clearLine(p.x, p.y, e.x, e.y)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
+      const nearest = this.enemies.filter(e => clearLine(p.x, p.y, e.x, e.y, 3, this.obstacles)).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0];
       if (nearest) p.angle = Math.atan2(nearest.y - p.y, nearest.x - p.x);
     }
     if (input.fire) this.shoot();
@@ -278,20 +312,20 @@ export class Game {
       if (e.type === 'boss') this.updateBoss(e, dt);
       e.stagger = Math.max(0, (e.stagger || 0) - dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
-      let target = approachPoint(e, p, e.r);
-      if (!clearLine(e.x, e.y, target.x, target.y, e.r)) {
+      let target = approachPoint(e, p, e.r, this.obstacles);
+      if (!clearLine(e.x, e.y, target.x, target.y, e.r, this.obstacles)) {
         const paths = this.paths.get(e.r) || this.updatePaths(e.r);
         let best = Infinity;
         target = e;
         for (let i = 0; i < paths.nodes.length; i++) {
           const n = paths.nodes[i], distance = Math.hypot(n.x - e.x, n.y - e.y), cost = distance + paths.costs[i];
-          if (distance > .1 && cost < best && clearLine(e.x, e.y, n.x, n.y, e.r)) { best = cost; target = n; }
+          if (distance > .1 && cost < best && clearLine(e.x, e.y, n.x, n.y, e.r, this.obstacles)) { best = cost; target = n; }
         }
       }
       const a = Math.atan2(target.y - e.y, target.x - e.x); e.angle = a;
       const step = e.windup > 0 || e.stagger > 0 ? 0 : e.dashStep > 0 ? BOSS_CHARGE.speed * e.dashStep : Math.min(e.speed * dt, Math.hypot(target.x - e.x, target.y - e.y));
       const direction = e.dashStep > 0 ? e.chargeAngle : a;
-      move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r);
+      move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r, this.obstacles);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
         this.hurtPlayer(e.type === 'boss' ? 28 : e.type === 'brute' ? 24 : 12);
         if (this.state === 'dead') return;
@@ -310,12 +344,12 @@ export class Game {
       const steps = Math.ceil(Math.hypot(nx - b.x, ny - b.y) / 5);
       for (let s = 1; s <= steps && b.life > 0; s++) {
         const sx = b.x + (nx - b.x) * s / steps, sy = b.y + (ny - b.y) * s / steps;
-        if (blocked(sx, sy, 1)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
+        if (blocked(sx, sy, 1, this.obstacles)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
         const e = this.enemies.find(e => e.hp > 0 && segmentHit(sx, sy, sx, sy, e.x, e.y, e.r + 3));
         if (e) {
           if (b.knockback) {
             const distance = b.knockback * (e.type === 'boss' ? .25 : 1), length = Math.hypot(b.vx, b.vy) || 1;
-            move(e, b.vx / length * distance, b.vy / length * distance, e.r);
+            move(e, b.vx / length * distance, b.vy / length * distance, e.r, this.obstacles);
             if (e.type !== 'boss') e.stagger = .45;
           }
           e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);

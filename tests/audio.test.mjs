@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HorrorAudio, GUN_AUDIO, ZOMBIE_AUDIO } from '../dist/audio.mjs';
+import { HorrorAudio, GUN_AUDIO, SMG_RECORDING, PISTOL_RELOAD_RECORDING, PISTOL_RECORDING, SHOTGUN_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING } from '../dist/audio.mjs';
 function context() {
   const param = () => ({ value: 0, cancelScheduledValues() {}, setValueAtTime(v) { this.value = v; }, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { this.peak = v; }, setTargetAtTime(v) { this.value = v; } });
   const nodes = [];
@@ -71,9 +71,9 @@ test('failed sample loads retry without redownloading successful samples', async
   globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,18);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,19);
-    assert.equal([...counts.values()].reduce((a,b)=>a+b),20);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,13);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,14);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),15);
   } finally {globalThis.fetch=originalFetch;}
 });
 
@@ -88,16 +88,69 @@ test('reload stages follow game progress once each and reset after loading', () 
   a.setEnabled(false);assert.equal(a.voices.size,0);
 });
 
-test('recorded zombie voices alternate, attenuate with distance and stop on mute', () => {
+test('ordinary zombie types use the supplied MP3, attenuate with distance and stop on mute', () => {
   const a = new HorrorAudio(context()); a.setEnabled(true);
-  for (const id of Object.values(ZOMBIE_AUDIO).flat()) a.gunBuffers.set(`zombie-${id}`, {duration:1, id});
-  for (const type of Object.keys(ZOMBIE_AUDIO)) {
+  const recording = {duration:1.824}; a.gunBuffers.set(ZOMBIE_RECORDING, recording);
+  for (const type of ['walker','runner','brute']) {
     assert.equal(a.zombieGrowl(type,30),true); const first=[...a.voices].at(-1);
     assert.equal(a.zombieGrowl(type,500),true); const second=[...a.voices].at(-1);
-    assert.notEqual(first.osc.buffer.id,second.osc.buffer.id);
+    assert.equal(first.osc.buffer, recording); assert.equal(second.osc.buffer, recording);
     assert.ok(first.gain.gain.value>second.gain.gain.value);
     assert.ok(first.osc.started && second.osc.started);
   }
   const voices=[...a.voices];a.setEnabled(false);
   assert.equal(a.voices.size,0);assert.ok(voices.every(v=>v.osc.stopped && v.gain.disconnected));
+});
+
+test('loader fetches the selected zombie MP3 once and shares it across types', async () => {
+  const originalFetch=globalThis.fetch, urls=[];
+  globalThis.fetch=async url=>{urls.push(String(url));return {ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};};
+  try {
+    const c=context();c.decodeAudioData=async()=>({duration:1.824});const a=new HorrorAudio(c);
+    await a.loadWeaponAudio();await a.loadWeaponAudio();
+    const zombieUrls=urls.filter(url=>url.includes('zombie'));
+    assert.equal(zombieUrls.length,2);
+    for(const id of [ZOMBIE_RECORDING,BOSS_RECORDING]) assert.equal(zombieUrls.filter(url=>url.endsWith(`${id}.mp3`)).length,1);
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('boss entrance uses its own full-speed screech once and defers ambient growls', () => {
+  const c=context(), a=new HorrorAudio(c); a.setEnabled(true);
+  const boss={duration:8.124}, normal={duration:1.824};
+  a.gunBuffers.set(BOSS_RECORDING,boss);a.gunBuffers.set(ZOMBIE_RECORDING,normal);
+  a.update(calm);assert.equal(a.bossEntrance(),true);
+  const voice=[...a.voices].at(-1);assert.equal(voice.osc.buffer,boss);assert.equal(voice.osc.playbackRate.value,1);
+  assert.ok(a.nextGrowl>=boss.duration+1);
+  c.currentTime=1;a.update({...calm,player:{x:640,y:410},enemies:[{x:650,y:410,hp:100,type:'boss'}]});
+  assert.equal(a.voices.size,1);
+  a.setEnabled(false);assert.ok(voice.osc.stopped);assert.equal(a.bossEntrance(),undefined);assert.equal(a.voices.size,0);
+});
+
+test('pistol, shotgun and SMG load their selected MP3 and shoot at original pitch', async () => {
+  const originalFetch=globalThis.fetch, urls=[];
+  globalThis.fetch=async url=>{urls.push(String(url));return {ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};};
+  try {
+    const c=context();c.decodeAudioData=async()=>({duration:3.082});const a=new HorrorAudio(c);
+    await a.loadWeaponAudio();a.setEnabled(true);
+    for(const [weapon,recording] of [['pistol',PISTOL_RECORDING],['shotgun',SHOTGUN_RECORDING],['smg',SMG_RECORDING]]) {
+      assert.ok(urls.some(url=>url.endsWith(`${recording}.mp3`)));
+      assert.ok(urls.some(url=>url.endsWith(`${PISTOL_RELOAD_RECORDING}.mp3`)));
+      assert.ok(!urls.some(url=>url.endsWith(`shot-${weapon}.wav`)));
+      assert.equal(a.gunshot(weapon),true);const voice=[...a.voices].at(-1);
+      assert.equal(voice.osc.buffer,a.gunBuffers.get(recording));assert.equal(voice.osc.playbackRate.value,1);
+    }
+    const voices=[...a.voices];a.setEnabled(false);assert.ok(voices.every(v=>v.osc.stopped));
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('9mm reload plays the supplied full clip once across all reload stages', () => {
+  const c=context(),a=new HorrorAudio(c);a.setEnabled(true);
+  const buffer={duration:2.22};a.gunBuffers.set(PISTOL_RELOAD_RECORDING,buffer);
+  a.reloadEffect('pistol',0,0,2.22);a.reloadStep=0;
+  a.reloadProgress('pistol',1,2.22);a.reloadProgress('pistol',.1,2.22);
+  assert.equal(a.voices.size,1);const voice=[...a.voices][0];
+  assert.equal(voice.osc.buffer,buffer);assert.equal(voice.osc.playbackRate.value,1);
+  a.stopVoices();a.reloadEffect('pistol',0,0,1.665);
+  assert.ok(Math.abs([...a.voices][0].osc.playbackRate.value-4/3)<.001);
+  a.setEnabled(false);assert.equal(a.voices.size,0);
 });

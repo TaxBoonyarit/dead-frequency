@@ -84,7 +84,7 @@ Each boss now carries a stable bossLook index from its wave definition, selectin
 
 ## Wave environments
 
-Every wave selects its own scene: quarantine block, red alley, abandoned hospital, ironworks, Blackwood, drowned docks, bone yard, slaughterhouse, biohazard lab, and Zero Ground. Scenes change ground and building materials, roof props, lighting, signage, and rain/mist/spores/embers. The scene is repainted only at wave changes; collision geometry stays aligned with the shared arena. FIELD MANUAL has a preview of all ten scenes.
+Each new run shuffles all ten scenes without repeats; the order stays fixed during that run, including pause/resume. Every wave selects the next scene: quarantine block, red alley, abandoned hospital, ironworks, Blackwood, drowned docks, bone yard, slaughterhouse, biohazard lab, and Zero Ground. Scenes change ground and building materials, roof props, lighting, signage, and rain/mist/spores/embers. The scene is repainted only at wave changes; each wave also randomizes building positions and sizes, vehicles and barricades. The same per-run geometry drives rendering, collision, bullets and enemy navigation. Cover leaves 64 px gaps and a clear perimeter, and avoids the survivor’s current position. FIELD MANUAL has a preview of all ten scenes.
 
 Reloads now use CC0 handling recordings by BMacZero: extraction, insertion and chamber handling follow reload progress, so pausing freezes the sequence and reload-speed upgrades adjust its timing. Each weapon card includes a reload preview. Ammo pickups also play an insertion sound.
 
@@ -97,3 +97,10 @@ The armory prioritizes purchase/equip actions, groups audio previews as secondar
 ## Matched firearm recordings
 
 Gunshot playback now uses eight distinct CC0 recordings from The Free Firearm Sound Library. The SMG uses Carl Gustav M45, revolver uses S&W 642, shotgun uses Benelli Nova, assault rifle uses AR-15, and sniper uses a Tikka T3 bolt-action report. The LMG uses an AK-47 report as a heavier automatic-weapon substitute. Shop preview feedback and button tooltips identify each source model. All sample files are shipped with the site, trimmed to single shots, and peak-normalized. See dist/audio/CREDITS.md and recording-manifest.json for provenance and processing.
+
+## Survivor selection
+
+Before starting, choose a female Scout (80 HP, speed 225) or male Guard
+(120 HP, speed 175). Movement and sprint use the selected speed; health
+pickups and upgrades respect that character's maximum HP. The choice stays
+selected through retries and difficulty changes and can be changed in the menu.

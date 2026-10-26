@@ -1,50 +1,66 @@
 {
   "pistol": {
     "source": "Walther PPQ/X_39P.wav",
-    "start_seconds": 1.403,
-    "duration": 0.6,
-    "peak": 0.78
+    "start_seconds": 1.4029,
+    "duration": 1.2,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "smg": {
     "source": "Carl Gustav M45/G_31P.wav",
     "start_seconds": 0.3063,
-    "duration": 0.35,
-    "peak": 0.78
+    "duration": 0.8,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "shotgun": {
     "source": "Nova/O_21P.wav",
     "start_seconds": 0.4272,
-    "duration": 0.8,
-    "peak": 0.78
+    "duration": 1.6,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "rifle": {
     "source": "SKS/U_14P.wav",
     "start_seconds": 3.573,
-    "duration": 0.75,
-    "peak": 0.78
+    "duration": 1.3,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "revolver": {
     "source": "Smith & Wesson 642/V_27P.wav",
     "start_seconds": 0.8014,
-    "duration": 0.7,
-    "peak": 0.78
+    "duration": 1.3,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "assault": {
     "source": "AR-15/D_32P.wav",
     "start_seconds": 0.6997,
-    "duration": 0.5,
-    "peak": 0.78
+    "duration": 1.1,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "lmg": {
     "source": "AK-47/C_28P.wav",
     "start_seconds": 0.6072,
-    "duration": 0.65,
-    "peak": 0.78
+    "duration": 1.2,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   },
   "sniper": {
     "source": "Tikka/W_29P.wav",
     "start_seconds": 0.5734,
-    "duration": 1.05,
-    "peak": 0.78
+    "duration": 1.8,
+    "peak": 0.78,
+    "sample_rate": 48000,
+    "processing": "linear peak normalization; 0.5ms fade-in; 80ms fade-out"
   }
 }

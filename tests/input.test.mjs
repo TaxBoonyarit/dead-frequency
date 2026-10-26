@@ -7,7 +7,7 @@ test('Thai-layout WASD events move the survivor in all four physical directions'
     const game = new Game(); game.start(); game.spawnClock = 999;
     const keys = new Set([controlKey({code,key})]);
     const input = keyboardMovement(keys); assert.deepEqual(input,{x,y});
-    game.update(.05,input); assert.equal(game.player.x,640+x*9.5); assert.equal(game.player.y,410+y*9.5);
+    game.update(.05,input); assert.equal(game.player.x,640+x*game.player.speed*.05); assert.equal(game.player.y,410+y*game.player.speed*.05);
     keys.delete(controlKey({code,key:key.toUpperCase()})); assert.deepEqual(keyboardMovement(keys),{x:0,y:0});
   }
 });

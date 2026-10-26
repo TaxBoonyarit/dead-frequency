@@ -30,7 +30,7 @@ test('walls absorb bullets before they hit enemies behind them', () => {
 });
 test('reload transfers only available reserve and cannot shoot during reload', () => {
   const g = running(); g.gun.ammo = 2; g.gun.reserve = 5; g.reload(); g.shoot(); assert.equal(g.gun.ammo, 2);
-  tick(g, 1.6); assert.equal(g.gun.ammo, 7); assert.equal(g.gun.reserve, 0); assert.equal(g.gun.reload, 0);
+  tick(g, g.gun.reloadTime + .2); assert.equal(g.gun.ammo, 7); assert.equal(g.gun.reserve, 0); assert.equal(g.gun.reload, 0);
   g.reload(); assert.equal(g.gun.reload, 0);
 });
 test('a completed wave offers valid upgrades and replenishes supplies', () => {
@@ -43,13 +43,13 @@ test('a completed wave offers valid upgrades and replenishes supplies', () => {
 test('wave ten ends with evacuation, and restart clears the run', () => {
   const g = running(); g.wave = 10; g.remaining = 0; for(let i=0;i<62;i++) g.update(.05);
   assert.equal(g.state, 'won'); assert.equal(g.score, 5000);
-  g.start(); assert.equal(g.wave, 1); assert.equal(g.score, 0); assert.equal(g.kills, 0); assert.equal(g.player.hp, 100);
+  g.start(); assert.equal(g.wave, 1); assert.equal(g.score, 0); assert.equal(g.kills, 0); assert.equal(g.player.hp, g.player.maxHp);
 });
 test('pause freezes time, damage, movement, and reload', () => {
   const g = running(); g.enemies.push(enemy(g.player.x, g.player.y)); g.gun.ammo = 1; g.reload(); g.pause();
   const snapshot = JSON.stringify({ time: g.time, player: g.player, gun: g.gun }); tick(g, 3, { x: 1, fire: true });
   assert.equal(JSON.stringify({ time: g.time, player: g.player, gun: g.gun }), snapshot);
-  g.pause(); g.update(.01); assert.ok(g.player.hp < 100);
+  g.pause(); g.update(.01); assert.ok(g.player.hp < g.player.maxHp);
 });
 test('contact damage has a grace period and death stops the simulation', () => {
   const g = running(); g.enemies.push(enemy(g.player.x, g.player.y)); g.player.hp = 13;
@@ -58,9 +58,9 @@ test('contact damage has a grace period and death stops the simulation', () => {
   const t = g.time; g.update(.05); assert.equal(g.time, t);
 });
 test('pickups heal up to max health and add ammunition once', () => {
-  const g = running(); g.player.hp = 95; g.gun.reserve = 0;
+  const g = running(); g.player.hp = g.player.maxHp - 5; g.gun.reserve = 0;
   g.drops = ['health', 'ammo'].map(type => ({ x: g.player.x, y: g.player.y, type, life: 10 }));
-  g.update(.01); assert.equal(g.player.hp, 100); assert.equal(g.gun.reserve, 30); assert.equal(g.drops.length, 0);
+  g.update(.01); assert.equal(g.player.hp, g.player.maxHp); assert.equal(g.gun.reserve, 30); assert.equal(g.drops.length, 0);
   g.update(.01); assert.equal(g.gun.reserve, 30);
 });
 test('zombies navigate around buildings toward a survivor', () => {
@@ -111,8 +111,8 @@ test('walkers and brutes reach targets around corners without clipping obstacles
 test('brutes can attack a player standing closer to a wall than their radius', () => {
   const g = running(); g.player.x = 355; g.player.y = 200;
   const e = { ...enemy(400, 400), r: 21, speed: 65, type: 'brute' }; g.enemies = [e];
-  for (let i = 0; i < 1200 && g.player.hp === 100; i++) g.update(1 / 60);
-  assert.ok(g.player.hp < 100); assert.equal(blocked(e.x, e.y, e.r), false);
+  for (let i = 0; i < 1200 && g.player.hp === g.player.maxHp; i++) g.update(1 / 60);
+  assert.ok(g.player.hp < g.player.maxHp); assert.equal(blocked(e.x, e.y, e.r), false);
 });
 
 test('wave clear leaves three seconds to collect supplies and pauses its countdown', () => {

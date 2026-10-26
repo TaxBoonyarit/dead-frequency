@@ -24,9 +24,9 @@ test('area attacks telegraph, allow escape, and cannot damage during pause', () 
   g.update(.05); assert.equal(b.windup, 1.1); assert.equal(g.hazards.length, 0);
   const x = b.targetX, y = b.targetY; g.player.x += 200;
   for (let i = 0; i < 23; i++) g.update(.05);
-  assert.equal(g.player.hp, 100); assert.ok(g.hazards.length);
-  g.player.x = x; g.player.y = y; g.pause(); g.update(.05); assert.equal(g.player.hp, 100);
-  g.pause(); g.update(.05); assert.ok(g.player.hp < 100);
+  assert.equal(g.player.hp, g.player.maxHp); assert.ok(g.hazards.length);
+  g.player.x = x; g.player.y = y; g.pause(); g.update(.05); assert.equal(g.player.hp, g.player.maxHp);
+  g.pause(); g.update(.05); assert.ok(g.player.hp < g.player.maxHp);
 });
 test('charge locks its direction after a warning and cannot cross buildings', () => {
   const g = fight(2), b = g.enemies[0]; b.attackClock = 0;
