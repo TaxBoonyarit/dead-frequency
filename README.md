@@ -155,3 +155,8 @@ line instead of the large arrow. Its spread ring reflects current accuracy,
 changes to amber while reloading, stays within the visible screen and remains
 faintly visible between shots. FIRE has a matching movable sight thumb and a
 Thai “ลากยิง” label. This is a visual aiming aid; it does not lock onto enemies.
+
+On phones the active arena spans the full screen width, with a compact header
+and no sidebar/footer below the match. Portrait framing fills the available screen and shows at least 620 world units horizontally. The scene scales uniformly and centers vertically, so controls have space without stretching sprites. Joystick,
+action buttons and HUD panels use softer translucent colors; text and aim markers
+retain contrast. Desktop layout and landscape controls keep their existing layout.

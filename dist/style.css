@@ -64,3 +64,31 @@ button,summary{touch-action:manipulation}summary:focus-visible{outline:2px solid
 #touch-fire{position:relative;overflow:visible;background:radial-gradient(circle at 50% 40%,#304b44ee,#12271fe8);border:1px solid #a4f1e099;box-shadow:inset 0 0 0 4px #a4f1e00b,0 3px 12px #07120dcc;color:#b9f5e5}#touch-fire::before{content:'';position:absolute;inset:5px;border:1px solid #a4f1e025;border-radius:50%;pointer-events:none}#touch-fire .fire-thumb{position:absolute;left:50%;top:41%;width:32px;height:32px;margin:-16px 0 0 -16px;transform:translate(var(--aim-x,0px),var(--aim-y,0px));pointer-events:none}#touch-fire svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}.fire-thumb .aim-dot{fill:currentColor;stroke:none}#touch-fire .fire-label{position:absolute;bottom:7px;left:0;right:0;font:10px var(--thai);pointer-events:none}#touch-fire.held{color:#e1fff5;background:radial-gradient(circle at center,#396b5e,#1c4237);border-color:#bfffe9;box-shadow:0 0 0 4px #a4f1e016,inset 0 0 22px #9befce20}#touch-fire.held::before{border-style:dashed;border-color:#bbfbe84d}#touch-fire.held .fire-thumb{filter:drop-shadow(0 0 5px #a4f1e077)}@media(prefers-reduced-motion:no-preference){#touch-fire{transition:background .12s,box-shadow .12s}}
 
 #touch-fire.held:not(.aiming){border-color:#b8ccc4;box-shadow:inset 0 0 0 4px #a4f1e00b}#touch-fire.held:not(.aiming) .fire-label{font-size:0}#touch-fire.held:not(.aiming) .fire-label::after{content:'ลากเพื่อยิง';font-size:9px}#touch-fire.aiming .fire-label{font-size:0}#touch-fire.aiming .fire-label::after{content:'กำลังยิง';font-size:9px}
+/* Phone layout: wider arena framing and quieter controls. */
+@media(max-width:800px){
+  .touch-mode.game-active .shell{padding:0}
+  .touch-mode.game-active .topbar{height:44px;padding:0 12px;border-color:#74856b20}
+  .touch-mode.game-active .brand{font-size:15px;gap:7px}.touch-mode.game-active .brand svg{width:26px}
+  .touch-mode.game-active .top-actions{gap:12px}.touch-mode.game-active .top-actions .text-button{font-size:8px;min-height:40px}
+  .touch-mode.game-active .operations{display:block;margin:0;gap:0}
+  .touch-mode.game-active .game-panel{border-left:0;border-right:0;border-color:#71836b35}
+  .touch-mode.game-active .sidebar,.touch-mode.game-active footer,.touch-mode.game-active .panel-bottom{display:none}
+  .touch-mode.game-active .panel-top{min-height:44px;padding:0 12px;background:#1b241bc4;border-color:#74856b25}
+  .touch-mode .hud{left:9px;right:9px;top:10px;gap:8px}
+  .touch-mode .hud>div{background:#14201980;border-color:#acbda02b;backdrop-filter:blur(3px);padding:8px;min-width:0}
+  .touch-mode .hud-label{color:#c1cbb4;letter-spacing:.5px;font-size:8px}
+  .touch-mode .hud strong{color:#e3e9d9;font-size:24px}.touch-mode .hud small{color:#acb7a0}
+  .touch-mode .health-track i{background:#b8cba0}.touch-mode .stamina-track i{background:#91a77b}
+  .touch-mode #joystick{background:#24382924;border-color:#c4d8ad44;box-shadow:none}
+  .touch-mode #joystick-knob{background:#c1d4ab40;border-color:#d1e1c064}
+  .touch-mode .touch-actions button{background:#253a282e;border-color:#bdcdb04d;color:#d3dfc6;box-shadow:none}
+  .touch-mode #touch-fire{background:radial-gradient(circle,#70988b22,#142c242e);border-color:#b4d8c55c;box-shadow:inset 0 0 0 4px #b9d6c408;color:#c8e5d6}
+  .touch-mode #touch-fire::before{border-color:#c4ddce25}
+  .touch-mode #touch-fire.held{background:#5279664d;border-color:#d4f0df9c;box-shadow:0 0 0 3px #bbdfc714}
+  .touch-mode #touch-fire.held:not(.aiming){box-shadow:inset 0 0 0 4px #c4dec70b}
+  .touch-mode .touch-actions button.held{background:#657e494d;box-shadow:0 0 0 2px #c4d8ad20}
+  .touch-mode #pause-button{background:#18271a66;border-color:#b0c39c4d;color:#cedbc3}
+}
+@media(max-width:800px) and (orientation:portrait){
+  .touch-mode.game-active .viewport{height:calc(100dvh - 88px);min-height:0;aspect-ratio:auto}
+}

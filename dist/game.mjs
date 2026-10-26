@@ -3,14 +3,14 @@ import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
-import { cameraOffset, pointerToWorld, drawTouchAim } from './view.mjs';
+import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
 let touchMode = initialTouchMode(query => matchMedia(query));
 let touchInput;
 const keys = new Set();
-let firing = false, pointer = null, viewWidth = W, cameraX = 0;
+let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, cameraY = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
 let soundEnabled = false, audio = null, soundscape = null, pausedForManual = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
@@ -158,8 +158,9 @@ function render(now) {
   if (nextScene !== activeScene || activeObstacles !== game.obstacles) { activeScene = nextScene; activeObstacles = game.obstacles; paintGround(); $('scene-label').textContent = activeScene.name; }
   const p = game.player;
   cameraX = cameraOffset(p.x, viewWidth);
-  ctx.clearRect(0, 0, canvas.width, H); rect(ctx, 0, 0, canvas.width, H, '#1c251b');
-  ctx.save(); ctx.translate(-cameraX, 0); ctx.drawImage(ground, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, viewHeight); rect(ctx, 0, 0, canvas.width, viewHeight, activeScene.ground);
+  ctx.save(); ctx.translate(-cameraX, -cameraY); ctx.drawImage(ground, 0, 0);
+  if (viewHeight > H) { ctx.strokeStyle = '#a4ba9a25'; ctx.lineWidth = 2; ctx.strokeRect(0, 0, W, H); }
   for (const s of game.stains) { circle(ctx, s.x, s.y, s.r, '#3d492b99'); circle(ctx, s.x + 4, s.y, s.r * .6, '#4a492c55'); }
   for (const d of game.drops) {
     if (d.life < 4 && Math.sin(now / 90) < 0) continue;
@@ -194,24 +195,25 @@ function render(now) {
   for (const a of game.particles) { ctx.globalAlpha = Math.min(1, a.life * 4); circle(ctx, a.x, a.y, 2, a.color); } ctx.globalAlpha = 1;
   sceneWeather(ctx, activeScene, now, W, H);
   ctx.restore();
-  const vignette = ctx.createRadialGradient(viewWidth / 2, H * .48, H * .2, viewWidth / 2, H * .5, Math.max(viewWidth, H) * .7);
-  vignette.addColorStop(0, '#00000000'); vignette.addColorStop(1, '#071009b3'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, viewWidth, H);
-  if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, H); }
+  const vignette = ctx.createRadialGradient(viewWidth / 2, viewHeight * .48, viewHeight * .2, viewWidth / 2, viewHeight * .5, Math.max(viewWidth, viewHeight) * .7);
+  vignette.addColorStop(0, '#00000000'); vignette.addColorStop(1, '#071009b3'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, viewWidth, viewHeight);
+  if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, viewHeight); }
   // Subtle surveillance scan lines.
-  ctx.fillStyle = '#0000000a'; for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, viewWidth, 1);
+  ctx.fillStyle = '#0000000a'; for (let y = 0; y < viewHeight; y += 4) ctx.fillRect(0, y, viewWidth, 1);
   if (touchMode && game.state === 'playing') {
-    drawTouchAim(ctx, { x: p.x - cameraX, y: p.y, angle: p.angle, width: viewWidth, height: H, scale: H / viewport.clientHeight, spread: game.accuracySpread(), active: !!touchInput.aim, reloading: game.gun.reload > 0 });
+    drawTouchAim(ctx, { x: p.x - cameraX, y: p.y - cameraY, angle: p.angle, width: viewWidth, height: viewHeight, scale: viewHeight / viewport.clientHeight, spread: game.accuracySpread(), active: !!touchInput.aim, reloading: game.gun.reload > 0 });
   }
   if (pointer && game.state === 'playing' && !touchMode) {
-    const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y;
+    const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y - cameraY;
     const radius = Math.max(7, Math.min(36, Math.hypot(aim.x - p.x, aim.y - p.y) * Math.tan(game.accuracySpread() / 2)));
     ctx.strokeStyle = '#d5e69a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
     for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) line(ctx, [[x + dx * (radius + 3), y + dy * (radius + 3)], [x + dx * (radius + 8), y + dy * (radius + 8)]], '#d5e69a', 1);
   }
 }
 function resize() {
-  viewWidth = Math.round(H * viewport.clientWidth / viewport.clientHeight);
-  canvas.width = viewWidth; canvas.height = H;
+  const size = viewportSize(viewport.clientWidth, Math.max(1, viewport.clientHeight), touchMode);
+  viewWidth = size.width; viewHeight = size.height; cameraY = size.cameraY;
+  canvas.width = viewWidth; canvas.height = viewHeight;
 }
 new ResizeObserver(resize).observe(viewport); resize();
 function initAudio() {
@@ -387,7 +389,7 @@ function releaseInput() { keys.clear(); firing = false; touchInput?.reset(); }
 window.addEventListener('blur', () => { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); game.pause(); renderState(); } });
 function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
-function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth)); }
+function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth), viewHeight, cameraY); }
 canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') setPointer(e); });
 canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || e.pointerType === 'touch' || game.state !== 'playing') return; if (touchMode) { touchMode = false; updateTouchMode(); } setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
 for (const event of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(event, () => firing = false);
@@ -398,6 +400,7 @@ function updateTouchMode() {
   releaseInput(); pointer = null;
   document.body.classList.toggle('touch-mode', touchMode);
   $('touch-mode-button').setAttribute('aria-pressed', String(touchMode));
+  resize();
   canvas.style.cursor = game.state === 'playing' && !touchMode ? 'none' : '';
 }
 $('touch-mode-button').onclick = () => { touchMode = !touchMode; updateTouchMode(); };

@@ -47,3 +47,15 @@ test('mobile reticle remains on screen in every aim direction and scales with th
     }
   }
 });
+
+test('phone framing widens the view without stretching and desktop zoom remains unchanged', async () => {
+  const {viewportSize,pointerToWorld}=await import('../dist/view.mjs');
+  for(const [width,height] of [[320,652],[390,756],[844,300]]) {
+    const view=viewportSize(width,height,true);
+    assert.ok(view.width>=620);assert.ok(Math.abs(view.width/view.height-width/height)<.002);
+    const world=pointerToWorld({clientX:width/2,clientY:height/2},{left:0,top:0,width,height},view.width,0,view.height,view.cameraY);
+    assert.ok(Math.abs(world.y-400)<1e-6);
+  }
+  assert.equal(viewportSize(390,756,false).height,800);
+  assert.equal(viewportSize(1280,800,true).height,800);
+});
