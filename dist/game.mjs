@@ -3,7 +3,7 @@ import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
-import { cameraOffset, pointerToWorld } from './view.mjs';
+import { cameraOffset, pointerToWorld, drawTouchAim } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
@@ -186,14 +186,6 @@ function render(now) {
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
   const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 340); beam.addColorStop(0, '#e2e6ac27'); beam.addColorStop(1, '#e2e6ac00');
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(5, 0); ctx.arc(0, 0, 340, -.38, .38); ctx.closePath(); ctx.fill(); ctx.restore();
-  if (touchMode && touchInput.firing && touchInput.aim && game.state === 'playing') {
-    const distance = Math.min(360, game.gun.range * 980), cone = Math.max(.025, game.accuracySpread() / 2);
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
-    ctx.fillStyle = '#d1e69a24'; ctx.strokeStyle = '#d1e69ab0'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(20, 0); ctx.arc(0, 0, distance, -cone, cone); ctx.closePath(); ctx.fill(); ctx.stroke();
-    line(ctx, [[25, 0], [distance, 0]], '#d1e69a99', 1);
-    line(ctx, [[distance - 12, -8], [distance, 0], [distance - 12, 8]], '#e3f4b8', 2); ctx.restore();
-  }
   if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(touchInput.x, touchInput.y) > .1) ? game.time * 14 : 0 }, true);
   if (game.gun.reload > 0) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();
@@ -207,6 +199,9 @@ function render(now) {
   if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, H); }
   // Subtle surveillance scan lines.
   ctx.fillStyle = '#0000000a'; for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, viewWidth, 1);
+  if (touchMode && game.state === 'playing') {
+    drawTouchAim(ctx, { x: p.x - cameraX, y: p.y, angle: p.angle, width: viewWidth, height: H, scale: H / viewport.clientHeight, spread: game.accuracySpread(), active: !!touchInput.aim, reloading: game.gun.reload > 0 });
+  }
   if (pointer && game.state === 'playing' && !touchMode) {
     const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y;
     const radius = Math.max(7, Math.min(36, Math.hypot(aim.x - p.x, aim.y - p.y) * Math.tan(game.accuracySpread() / 2)));

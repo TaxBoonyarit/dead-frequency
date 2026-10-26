@@ -151,3 +151,9 @@ can slide outside the button while pointer capture keeps control. A 10px dead
 zone prevents firing before a direction is selected. No automatic target locking is used. A direction arrow and spread cone
 show the shot direction. Lifting the firing finger, cancelling touch, pausing
 or switching control mode clears the manual aim and stops firing.
+
+The mobile reticle uses a cyan segmented sight, center dot and subtle dashed
+line instead of the large arrow. Its spread ring reflects current accuracy,
+changes to amber while reloading, stays within the visible screen and remains
+faintly visible between shots. FIRE has a matching movable sight thumb and a
+Thai “ลากยิง” label. This is a visual aiming aid; it does not lock onto enemies.

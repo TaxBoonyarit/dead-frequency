@@ -35,3 +35,15 @@ test('pointer conversion handles resized and scrolled canvas bounds', () => {
   assert.equal(cameraOffset(640, 1600), -160);
   assert.equal(cameraOffset(1266, 688), 592);
 });
+
+test('mobile reticle remains on screen in every aim direction and scales with the display', async () => {
+  const {touchAimPoint}=await import('../dist/view.mjs');
+  for(const [width,height,scale] of [[494,800,1.35],[1732,800,2.66]]) {
+    for(let angle=0;angle<Math.PI*2;angle+=Math.PI/8) {
+      const point=touchAimPoint(width/2,height/2,angle,width,height,scale);
+      assert.ok(point.x>=26*scale-.01&&point.x<=width-26*scale+.01);
+      assert.ok(point.y>=110*scale-.01&&point.y<=height-26*scale+.01);
+      assert.ok(point.distance>0&&Number.isFinite(point.distance));
+    }
+  }
+});
