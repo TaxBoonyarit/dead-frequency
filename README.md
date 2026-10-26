@@ -12,6 +12,14 @@ npm run dev
 
 เปิด http://127.0.0.1:4173
 
+## เผยแพร่บน GitHub Pages
+
+ใน GitHub repository ไปที่ Settings → Pages → Build and deployment แล้วเลือก Source เป็น **GitHub Actions** จากนั้น push เข้า `main` หรือสั่งรัน **Deploy to GitHub Pages** จากแท็บ Actions
+
+Workflow จะตรวจ syntax และรันเทสต์ก่อนเผยแพร่เฉพาะ `dist/` พร้อมไฟล์เสียง เว็บจะอยู่ที่ https://taxboonyarit.github.io/dead-frequency/ หลัง deploy สำเร็จ
+
+เมื่อเปิดเว็บ กด **SOUND OFF** ให้เปลี่ยนเป็น **SOUND ON** เพื่อเปิดเสียง
+
 ## ควบคุม
 
 - WASD / ปุ่มลูกศร: เดิน
