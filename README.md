@@ -173,3 +173,11 @@ label upgrades as starting the next wave immediately. Leaving an unfinished run
 asks for confirmation, with staying in the mission as the default action; finished
 runs return directly to setup. Escape dismisses either dialog without starting or
 resetting a run.
+
+## Phone fullscreen
+
+The fullscreen button expands the entire game panel, keeping its toolbar and exit
+button available. Browsers that reject or lack the Fullscreen API use a fixed panel
+that fills the available web viewport. Tap the same button or press Escape to exit
+that fallback. It follows dynamic viewport height and allows for display safe areas;
+the fallback cannot hide browser chrome controlled by the phone browser.

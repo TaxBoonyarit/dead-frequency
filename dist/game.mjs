@@ -375,7 +375,33 @@ $('quit-confirm-done').onclick = () => { $('quit-confirm').close(); resetToMenu(
 $('start-button').onclick = startGame;
 $('pause-button').onclick = () => { game.pause(); renderState(); };
 $('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
-$('fullscreen-button').onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await viewport.requestFullscreen(); } catch { toast('เบราว์เซอร์นี้ไม่รองรับโหมดเต็มหน้าจอ'); } };
+function syncFullscreen() {
+  const expanded = !!document.fullscreenElement || document.body.classList.contains('game-expanded');
+  const button = $('fullscreen-button');
+  button.setAttribute('aria-pressed', String(expanded));
+  button.setAttribute('aria-label', expanded ? 'ออกจากเต็มหน้าจอ' : 'เต็มหน้าจอ');
+  button.title = expanded ? 'ออกจากเต็มหน้าจอ' : 'เต็มหน้าจอ';
+  button.textContent = expanded ? '↙' : '⛶';
+  resize();
+}
+async function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    try { await document.exitFullscreen(); } catch { toast('ออกจากเต็มหน้าจอไม่สำเร็จ ลองอีกครั้ง'); }
+  } else if (document.body.classList.contains('game-expanded')) {
+    document.body.classList.remove('game-expanded');
+  } else {
+    // Some phone browsers cannot fullscreen an HTML game; fill the web viewport instead.
+    try {
+      const panel = canvas.closest('.game-panel');
+      if (!panel.requestFullscreen || document.fullscreenEnabled === false) throw new Error('Fullscreen unavailable');
+      await panel.requestFullscreen();
+    } catch { document.body.classList.add('game-expanded'); }
+  }
+  syncFullscreen();
+}
+$('fullscreen-button').onclick = toggleFullscreen;
+document.addEventListener('fullscreenchange', syncFullscreen);
+
 document.querySelectorAll('[data-difficulty]').forEach(b => {
   b.setAttribute('aria-pressed', String(b.classList.contains('selected')));
   b.onclick = () => {
@@ -391,6 +417,7 @@ $('manual').addEventListener('close', () => { if (pausedForManual && game.state 
 window.addEventListener('keydown', e => {
   if ($('manual').open || $('armory').open || $('touch-tutorial').open || $('quit-confirm').open) return;
   const key = controlKey(e);
+  if (key === 'escape' && document.body.classList.contains('game-expanded')) { e.preventDefault(); toggleFullscreen(); return; }
   if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
   if (!e.repeat && (key === 'escape' || key === 'p')) { game.pause(); renderState(); return; }
