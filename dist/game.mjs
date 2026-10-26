@@ -186,6 +186,14 @@ function render(now) {
   ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
   const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 340); beam.addColorStop(0, '#e2e6ac27'); beam.addColorStop(1, '#e2e6ac00');
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(5, 0); ctx.arc(0, 0, 340, -.38, .38); ctx.closePath(); ctx.fill(); ctx.restore();
+  if (touchMode && touchInput.firing && touchInput.aim && game.state === 'playing') {
+    const distance = Math.min(360, game.gun.range * 980), cone = Math.max(.025, game.accuracySpread() / 2);
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle);
+    ctx.fillStyle = '#d1e69a24'; ctx.strokeStyle = '#d1e69ab0'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(20, 0); ctx.arc(0, 0, distance, -cone, cone); ctx.closePath(); ctx.fill(); ctx.stroke();
+    line(ctx, [[25, 0], [distance, 0]], '#d1e69a99', 1);
+    line(ctx, [[distance - 12, -8], [distance, 0], [distance - 12, 8]], '#e3f4b8', 2); ctx.restore();
+  }
   if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(touchInput.x, touchInput.y) > .1) ? game.time * 14 : 0 }, true);
   if (game.gun.reload > 0) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();
@@ -402,10 +410,13 @@ canvas.addEventListener('pointerdown', e => {
   if (e.pointerType === 'touch' && !touchMode) { touchMode = true; updateTouchMode(); }
 });
 updateTouchMode();
+function touchAim(player) {
+  return touchInput.aim ? { x: player.x + touchInput.aim.x * 1000, y: player.y + touchInput.aim.y * 1000 } : null;
+}
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   const movement = keyboardMovement(keys);
-  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: firing || touchInput.firing || keys.has(' '), aim: touchMode ? null : pointerAim, autoAim: touchMode && (touchInput.firing || keys.has(' ')) });
+  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: firing || touchInput.firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim, autoAim: touchMode && !touchInput.aim && (touchInput.firing || keys.has(' ')) });
   for (const e of game.events.splice(0)) {
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);

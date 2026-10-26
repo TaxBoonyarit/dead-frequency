@@ -25,7 +25,7 @@ test('arrow keys and key-only fallback retain existing controls', () => {
 function element() {
   const listeners = new Map(), classes = new Set();
   return {
-    style: {}, offsetWidth:37,
+    style: {setProperty(name,value){this[name]=value;}}, offsetWidth:37,
     classList:{add:c=>classes.add(c),remove:c=>classes.delete(c)},
     addEventListener(type,fn){if(!listeners.has(type))listeners.set(type,[]);listeners.get(type).push(fn);},
     getBoundingClientRect(){return {left:0,top:0,width:92,height:92};},
@@ -65,4 +65,32 @@ test('touch-style simultaneous movement, auto aim, sprint and fire work in the e
   game.update(.05,{x:1,sprint:true,fire:true,autoAim:true});
   assert.ok(game.player.x>x);assert.ok(game.player.stamina<100);assert.equal(game.gun.ammo,17);
   assert.ok(Math.abs(game.player.angle)<.01);assert.ok(game.bullets[0].vx>0);
+});
+
+test('dragging FIRE aims relative to the initial touch, independently of walking', async () => {
+  const {bindTouchControls}=await import('../dist/input.mjs');
+  const stick=element(),knob=element(),fire=element(),sprint=element();
+  const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
+  stick.send('pointerdown',1,200,46);fire.send('pointerdown',2,35,50);
+  fire.send('pointermove',2,40,50);assert.equal(input.aim,null);
+  fire.send('pointermove',2,35,-50);assert.deepEqual(input.aim,{x:0,y:-1});assert.equal(input.x,1);
+  fire.send('pointermove',3,200,50);assert.deepEqual(input.aim,{x:0,y:-1});
+  fire.send('pointermove',2,135,50);assert.deepEqual(input.aim,{x:1,y:0});
+  fire.send('pointerup',2);assert.equal(input.aim,null);assert.equal(input.firing,false);assert.equal(input.x,1);
+  fire.send('pointerdown',4);fire.send('pointermove',4,0,46);input.reset();
+  assert.equal(input.aim,null);assert.equal(fire.style['--aim-x'],'0px');
+});
+
+test('manual drag direction controls actual bullets even when an enemy is in another direction', async () => {
+  const {bindTouchControls}=await import('../dist/input.mjs');
+  for(const [dx,dy] of [[100,0],[-100,0],[0,100],[0,-100]]) {
+    const stick=element(),knob=element(),fire=element(),sprint=element();
+    const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
+    fire.send('pointerdown',2);fire.send('pointermove',2,46+dx,46+dy);
+    const g=new Game(()=>.5);g.start();g.obstacles=[];g.spawnClock=999;g.remaining=999;
+    g.enemies=[{x:g.player.x+150,y:g.player.y,hp:100,maxHp:100,type:'walker',r:14,speed:0,phase:0,hit:0}];
+    g.update(.01,{fire:input.firing,aim:p=>({x:p.x+input.aim.x*1000,y:p.y+input.aim.y*1000}),autoAim:!input.aim});
+    const bullet=g.bullets[0];assert.ok(bullet.vx*dx+bullet.vy*dy>0);
+    assert.ok(Math.abs(bullet.vx*dy-bullet.vy*dx)<1e-6);
+  }
 });
