@@ -1,7 +1,7 @@
 export const GUN_AUDIO = {
-  pistol: ['shot-pistol', 1, .44], smg: ['shot-smg', 1, .32], shotgun: ['shot-shotgun', 1, .52],
-  rifle: ['shot-rifle', 1, .46], revolver: ['shot-revolver', 1, .48], assault: ['shot-assault', 1, .38],
-  lmg: ['shot-lmg', 1, .42], sniper: ['shot-sniper', 1, .54],
+  pistol: ['shot-pistol', 1, .66], smg: ['shot-smg', 1, .48], shotgun: ['shot-shotgun', 1, .78],
+  rifle: ['shot-rifle', 1, .69], revolver: ['shot-revolver', 1, .72], assault: ['shot-assault', 1, .57],
+  lmg: ['shot-lmg', 1, .63], sniper: ['shot-sniper', 1, .81],
 };
 export const GUN_RECORDINGS = {
   pistol: 'Walther PPQ · 9mm', smg: 'Carl Gustav M45 · SMG', shotgun: 'Benelli Nova · 12 gauge',
