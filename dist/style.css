@@ -157,3 +157,11 @@ button,summary{letter-spacing:0}
 .game-tools #shop-button,.game-tools #touch-mode-button,.game-tools #wake-lock-button{font:500 var(--ui-small)/1.5 var(--thai)}
 .text-button{white-space:nowrap}
 @media(max-width:520px){.brand{font-size:16px;line-height:1;letter-spacing:0}}
+
+.wave-banner.boss-alert{color:#ff6868;text-shadow:0 2px 5px #000,0 0 18px #b8181866;font-size:clamp(22px,5vw,42px);line-height:1.3;letter-spacing:1px;padding:0 12px}
+.wave-banner.boss-alert small{color:#ffb3b3}
+@media(prefers-reduced-motion:no-preference){
+  .wave-banner.boss-alert{animation:boss-alert-shake .24s linear infinite}
+  @keyframes boss-alert-shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,-1px)}80%{transform:translate(2px,1px)}}
+}
+@media(max-width:520px) and (orientation:portrait){.wave-banner.boss-alert{top:max(30%,180px)}}

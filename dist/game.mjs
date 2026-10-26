@@ -459,6 +459,7 @@ function frame(now) {
   const movement = keyboardMovement(keys);
   game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing && !!touchInput.aim : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
   for (const e of game.events.splice(0)) {
+    if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
