@@ -189,3 +189,9 @@ this page is visible. A checkmark means the system granted the screen wake lock;
 “รอ” means the system released it. Returning to the page requests it again while
 the toggle remains on. Tap again to turn it off. Unsupported browsers disable the
 button; requests may fail on insecure connections or under system power policies.
+
+## Interface typography
+
+Thai and English interface text share Noto Sans Thai. Buttons, body copy and
+secondary labels use consistent size and weight rules; headings retain a size
+hierarchy. Numeric HUD values use tabular digits for stable alignment.
