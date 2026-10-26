@@ -132,3 +132,7 @@ body.game-expanded,body:has(.game-panel:fullscreen){overflow:hidden}
 .game-expanded .game-panel .viewport,.game-panel:fullscreen .viewport{flex:1;min-height:0;height:auto;aspect-ratio:auto;width:100%}
 .game-expanded .viewport:has(#menu-overlay:not([hidden])),.game-panel:fullscreen .viewport:has(#menu-overlay:not([hidden])){overflow-y:auto}
 .game-expanded .hud,.game-panel:fullscreen .hud{left:max(10px,env(safe-area-inset-left));right:max(10px,env(safe-area-inset-right))}
+
+.game-tools #wake-lock-button{font:11px var(--thai);white-space:nowrap;min-height:44px}
+.game-tools #wake-lock-button[aria-pressed=true]{color:var(--accent);border-bottom:2px solid var(--accent)}
+@media(max-width:900px){.panel-top>div:first-child{display:none}.game-tools{width:100%;justify-content:space-between;gap:2px}.game-tools #wake-lock-button{font-size:10px}}

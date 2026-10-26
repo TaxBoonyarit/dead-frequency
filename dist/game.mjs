@@ -1,3 +1,4 @@
+import { bindWakeLock } from './wake-lock.mjs';
 import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
@@ -375,6 +376,7 @@ $('quit-confirm-done').onclick = () => { $('quit-confirm').close(); resetToMenu(
 $('start-button').onclick = startGame;
 $('pause-button').onclick = () => { game.pause(); renderState(); };
 $('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
+bindWakeLock($('wake-lock-button'), { document, navigator, notify: toast });
 function syncFullscreen() {
   const expanded = !!document.fullscreenElement || document.body.classList.contains('game-expanded');
   const button = $('fullscreen-button');

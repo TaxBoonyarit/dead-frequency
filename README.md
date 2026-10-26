@@ -181,3 +181,11 @@ button available. Browsers that reject or lack the Fullscreen API use a fixed pa
 that fills the available web viewport. Tap the same button or press Escape to exit
 that fallback. It follows dynamic viewport height and allows for display safe areas;
 the fallback cannot hide browser chrome controlled by the phone browser.
+
+## Keep the phone screen awake
+
+Tap **กันจอดับ** in the game toolbar to prevent the screen from sleeping while
+this page is visible. A checkmark means the system granted the screen wake lock;
+“รอ” means the system released it. Returning to the page requests it again while
+the toggle remains on. Tap again to turn it off. Unsupported browsers disable the
+button; requests may fail on insecure connections or under system power policies.
