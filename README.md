@@ -160,3 +160,16 @@ On phones the active arena spans the full screen width, with a compact header
 and no sidebar/footer below the match. Portrait framing fills the available screen and shows at least 620 world units horizontally. The scene scales uniformly and centers vertically, so controls have space without stretching sprites. Joystick,
 action buttons and HUD panels use softer translucent colors; text and aim markers
 retain contrast. Desktop layout and landscape controls keep their existing layout.
+
+## Mission setup and safe exit
+
+Character and difficulty choices now appear together before the start button.
+The setup menu uses normal page scrolling and keeps the start controls visible
+on a 390×844 screen. Touch mode shows a drag-to-aim illustration before the first
+mission in each page session; enemies start only after the player confirms they
+are ready. Cancelling the lesson preserves the selected character and difficulty.
+Wave breaks focus their named status region for keyboard access and explicitly
+label upgrades as starting the next wave immediately. Leaving an unfinished run
+asks for confirmation, with staying in the mission as the default action; finished
+runs return directly to setup. Escape dismisses either dialog without starting or
+resetting a run.

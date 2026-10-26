@@ -9,6 +9,7 @@ const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport'
 const game = new Game();
 let touchMode = initialTouchMode(query => matchMedia(query));
 let touchInput;
+let touchTutorialSeen = false;
 const keys = new Set();
 let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, cameraY = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
@@ -269,18 +270,20 @@ function renderState() {
   document.querySelectorAll('[data-difficulty], [data-character]').forEach(b => b.disabled = s !== 'menu');
   const c = $('state-content');
   if (s === 'paused') {
-    c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">กลับไปลุยต่อ <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>';
+    c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title" id="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">กลับไปลุยต่อ <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>';
     $('resume-button').onclick = () => game.pause(); $('quit-button').onclick = returnMenu;
   } else if (s === 'upgrade') {
-    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">ซื้อปืนก่อน แล้วเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป<br>ฟื้นฟูเลือด 20 · เสบียง ${AMMO.wave} นัด แล้วเติมแมกจากกระสุนสำรอง</p><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">SELECT UPGRADE <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
+    c.innerHTML = `<div class="state-eyebrow">WAVE ${String(game.wave).padStart(2, '0')} / AREA SECURED</div><h2 class="state-title" id="state-title">LIVE. LEARN. RELOAD.</h2><p class="state-copy">เข้าร้านซื้อปืนให้เรียบร้อย · เลือกอัปเกรดแล้วเริ่มระลอกถัดไปทันที<br>ฟื้นฟูเลือด 20 · เสบียง ${AMMO.wave} นัด แล้วเติมแมกจากกระสุนสำรอง</p><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">เลือกและเริ่มเวฟถัดไป <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
     $('wave-shop-button').onclick = openShop;
     c.querySelectorAll('[data-upgrade]').forEach(b => b.onclick = () => { game.upgrade(b.dataset.upgrade); tone(550, .15, 'sine', .04, 900); });
   } else if (s === 'dead' || s === 'won') {
     storeBest();
-    c.innerHTML = `<div class="state-eyebrow">${s === 'won' ? 'TRANSMISSION RECEIVED / YOU MADE IT' : 'CONNECTION LOST / SURVIVOR DOWN'}</div><h2 class="state-title">${s === 'won' ? 'SEE YOU AT DAWN.' : 'THE SIGNAL DIED.'}</h2><p class="state-copy">${s === 'won' ? 'คุณรอดแล้ว หน่วยอพยพได้รับสัญญาณของคุณ' : 'คืนนี้อาจไม่ใช่คืนของคุณ ลองส่งสัญญาณอีกครั้ง'}</p><div class="result-stats"><div><b>${String(game.wave).padStart(2, '0')}</b><span>WAVE REACHED</span></div><div><b>${game.kills}</b><span>ELIMINATIONS</span></div><div><b>${game.score.toLocaleString()}</b><span>FINAL SCORE</span></div></div><button class="primary" id="retry-button">ลองอีกครั้ง <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>`;
+    c.innerHTML = `<div class="state-eyebrow">${s === 'won' ? 'TRANSMISSION RECEIVED / YOU MADE IT' : 'CONNECTION LOST / SURVIVOR DOWN'}</div><h2 class="state-title" id="state-title">${s === 'won' ? 'SEE YOU AT DAWN.' : 'THE SIGNAL DIED.'}</h2><p class="state-copy">${s === 'won' ? 'คุณรอดแล้ว หน่วยอพยพได้รับสัญญาณของคุณ' : 'คืนนี้อาจไม่ใช่คืนของคุณ ลองส่งสัญญาณอีกครั้ง'}</p><div class="result-stats"><div><b>${String(game.wave).padStart(2, '0')}</b><span>WAVE REACHED</span></div><div><b>${game.kills}</b><span>ELIMINATIONS</span></div><div><b>${game.score.toLocaleString()}</b><span>FINAL SCORE</span></div></div><button class="primary" id="retry-button">ลองอีกครั้ง <span>↗</span></button><button class="secondary" id="quit-button">กลับหน้าเริ่มต้น</button>`;
     $('retry-button').onclick = startGame; $('quit-button').onclick = returnMenu;
   }
   if (s !== 'playing') { $('wave-banner').hidden = true; $('toast').hidden = true; }
+  if (s === 'upgrade') { c.setAttribute('aria-labelledby', 'state-title'); c.focus({ preventScroll: true }); }
+  else c.removeAttribute('aria-labelledby');
   if (s === 'paused' || s === 'dead' || s === 'won') c.querySelector('button')?.focus({ preventScroll: true });
 }
 function weaponArt(id) {
@@ -356,8 +359,19 @@ characterOptions.querySelectorAll('[data-character]').forEach(button => {
     updateHUD();
   };
 });
-function startGame() { initAudio(); game.start(); renderState(); canvas.focus({ preventScroll: true }); updateHUD(); }
-function returnMenu() { storeBest(); game.reset(game.difficulty); renderState(); updateHUD(); $('start-button').focus({ preventScroll: true }); }
+function startGame() {
+  if (touchMode && !touchTutorialSeen) { $('touch-tutorial').showModal(); return; }
+  initAudio(); game.start(); renderState(); canvas.focus({ preventScroll: true }); updateHUD();
+}
+function returnMenu() {
+  if (['playing', 'paused', 'upgrade'].includes(game.state)) { $('quit-confirm').showModal(); return; }
+  resetToMenu();
+}
+function resetToMenu() { storeBest(); game.reset(game.difficulty); renderState(); updateHUD(); $('start-button').focus({ preventScroll: true }); }
+$('touch-tutorial-done').onclick = () => { touchTutorialSeen = true; $('touch-tutorial').close(); startGame(); };
+$('touch-tutorial-cancel').onclick = () => $('touch-tutorial').close();
+$('quit-cancel').onclick = () => $('quit-confirm').close();
+$('quit-confirm-done').onclick = () => { $('quit-confirm').close(); resetToMenu(); };
 $('start-button').onclick = startGame;
 $('pause-button').onclick = () => { game.pause(); renderState(); };
 $('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'SOUND ON' : 'SOUND OFF'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
@@ -375,7 +389,7 @@ $('manual-button').onclick = openManual;
 $('close-manual').onclick = $('manual-done').onclick = () => $('manual').close();
 $('manual').addEventListener('close', () => { if (pausedForManual && game.state === 'paused') { game.pause(); renderState(); canvas.focus({ preventScroll: true }); } pausedForManual = false; });
 window.addEventListener('keydown', e => {
-  if ($('manual').open || $('armory').open) return;
+  if ($('manual').open || $('armory').open || $('touch-tutorial').open || $('quit-confirm').open) return;
   const key = controlKey(e);
   if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
