@@ -1,3 +1,7 @@
+export function initialTouchMode(media) {
+  return media('(pointer:coarse)').matches && !media('(any-pointer:fine)').matches;
+}
+
 const PHYSICAL_KEYS = {
   KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', KeyR: 'r', KeyP: 'p',
   ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright',

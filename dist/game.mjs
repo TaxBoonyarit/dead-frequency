@@ -1,13 +1,13 @@
 import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
-import { controlKey, keyboardMovement, bindTouchControls } from './input.mjs';
+import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
 import { cameraOffset, pointerToWorld, drawTouchAim } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
-let touchMode = matchMedia('(any-pointer:coarse)').matches || navigator.maxTouchPoints > 0;
+let touchMode = initialTouchMode(query => matchMedia(query));
 let touchInput;
 const keys = new Set();
 let firing = false, pointer = null, viewWidth = W, cameraX = 0;
@@ -389,7 +389,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && gam
 function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
 function pointerAim(player) { return pointer && pointerToWorld(pointer, canvas.getBoundingClientRect(), viewWidth, cameraOffset(player.x, viewWidth)); }
 canvas.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') setPointer(e); });
-canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || e.pointerType === 'touch' || touchMode || game.state !== 'playing') return; setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
+canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || e.pointerType === 'touch' || game.state !== 'playing') return; if (touchMode) { touchMode = false; updateTouchMode(); } setPointer(e); const aim = pointerAim(game.player); game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); firing = true; game.shoot(); canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true }); });
 for (const event of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(event, () => firing = false);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 touchInput = bindTouchControls({ stick: $('joystick'), knob: $('joystick-knob'), fire: $('touch-fire'), sprint: $('touch-sprint'), canUse: () => touchMode && game.state === 'playing' });
@@ -401,9 +401,9 @@ function updateTouchMode() {
   canvas.style.cursor = game.state === 'playing' && !touchMode ? 'none' : '';
 }
 $('touch-mode-button').onclick = () => { touchMode = !touchMode; updateTouchMode(); };
-canvas.addEventListener('pointerdown', e => {
-  if (e.pointerType === 'touch' && !touchMode) { touchMode = true; updateTouchMode(); }
-});
+document.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' && !touchMode && !e.target.closest?.('#touch-mode-button')) { touchMode = true; updateTouchMode(); }
+}, true);
 updateTouchMode();
 function touchAim(player) {
   return touchInput.aim ? { x: player.x + touchInput.aim.x * 1000, y: player.y + touchInput.aim.y * 1000 } : null;

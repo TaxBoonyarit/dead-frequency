@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {controlKey, keyboardMovement} from '../dist/input.mjs';
+import {controlKey, keyboardMovement, initialTouchMode} from '../dist/input.mjs';
 import {Game} from '../dist/engine.mjs';
 test('Thai-layout WASD events move the survivor in all four physical directions', () => {
   for (const [code, key, x, y] of [['KeyW','ไ',0,-1],['KeyA','ฟ',-1,0],['KeyS','ห',0,1],['KeyD','ก',1,0]]) {
@@ -127,4 +127,14 @@ test('finger jitter never fires; returning to the center stops firing until anot
   fire.send('pointermove',2,66,46);assert.equal(input.firing,false);
   fire.send('pointermove',2,46,16);assert.equal(input.firing,true);assert.deepEqual(input.aim,{x:0,y:-1});
   fire.send('pointerup',2);assert.equal(input.firing,false);assert.equal(input.aim,null);
+});
+
+test('desktop and hybrid computers default to mouse controls; touch-only devices default to touch', () => {
+  const desktop = query => ({matches:query==='(any-pointer:fine)'});
+  const hybrid = () => ({matches:true});
+  const phone = query => ({matches:query==='(pointer:coarse)'});
+  assert.equal(initialTouchMode(desktop),false);
+  assert.equal(initialTouchMode(hybrid),false);
+  assert.equal(initialTouchMode(phone),true);
+  assert.equal(initialTouchMode(()=>({matches:false})),false);
 });

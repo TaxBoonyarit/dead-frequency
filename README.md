@@ -138,8 +138,7 @@ and restore accuracy.
 
 ## Touchscreen controls
 
-Touch-capable devices, including laptops with both mouse and touch, enable the
-on-screen controls automatically. The “สัมผัส” toolbar button toggles them on any
+Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “สัมผัส” toolbar button toggles them on any
 device. Drag the left stick to move; hold and drag FIRE to aim and shoot in that direction,
 hold RUN to sprint, and tap R to reload. Each held action tracks its own finger,
 so walking and firing work together. Releasing or cancelling that finger stops
