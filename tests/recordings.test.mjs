@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {WEAPONS} from '../dist/engine.mjs';
-import {GUN_AUDIO,GUN_RECORDINGS,SMG_RECORDING,PISTOL_RELOAD_RECORDING,PISTOL_RECORDING,SHOTGUN_RECORDING,ZOMBIE_RECORDING,BOSS_RECORDING} from '../dist/audio.mjs';
+import {GUN_AUDIO,GUN_RECORDINGS,RIFLE_RECORDING,REVOLVER_RECORDING,SNIPER_RECORDING,LMG_RECORDING,SMG_RECORDING,PISTOL_RELOAD_RECORDING,PISTOL_RECORDING,SHOTGUN_RECORDING,ZOMBIE_RECORDING,BOSS_RECORDING} from '../dist/audio.mjs';
 test('every weapon ships a distinct recording, with PCM headroom and prompt attack',()=>{
   const hashes=new Set(),sources=new Set();
   for(const weapon of WEAPONS){
     const [sample,rate,volume]=GUN_AUDIO[weapon.id];assert.ok(rate>0&&volume>0);assert.ok(GUN_RECORDINGS[weapon.id]);sources.add(sample);
-    if (['shotgun','pistol','smg'].includes(weapon.id)) {
-      assert.equal(sample,({pistol:PISTOL_RECORDING,shotgun:SHOTGUN_RECORDING,smg:SMG_RECORDING})[weapon.id]);assert.equal(rate,1);
+    if (['shotgun','pistol','smg','lmg','sniper','revolver','rifle'].includes(weapon.id)) {
+      assert.equal(sample,({pistol:PISTOL_RECORDING,shotgun:SHOTGUN_RECORDING,smg:SMG_RECORDING,lmg:LMG_RECORDING,sniper:SNIPER_RECORDING,revolver:REVOLVER_RECORDING,rifle:RIFLE_RECORDING})[weapon.id]);assert.equal(rate,1);
       const mp3=readFileSync(new URL(`../dist/audio/${sample}.mp3`,import.meta.url));
       assert.ok(mp3.length>1000);
       assert.ok(mp3.toString('ascii',0,3)==='ID3' || (mp3[0]===0xff && (mp3[1]&0xe0)===0xe0));

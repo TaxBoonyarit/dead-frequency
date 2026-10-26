@@ -1,26 +1,45 @@
-export const SMG_RECORDING = 'moniker_subriquet-gunshot_smg_shot_1-203471';
-export const PISTOL_RELOAD_RECORDING = 'freesound_community-9mm-pistol-load-and-chamber-98830';
-export const PISTOL_RECORDING = 'freesound_community-9mm-pistol-shot-6349';
-export const SHOTGUN_RECORDING = 'dragon-studio-gunshot-372470';
+export const AMBIENCE_RECORDING = 'ambience-horror';
+export const RIFLE_RECORDING = 'weapon-ranger-r8';
+export const REVOLVER_RECORDING = 'weapon-judge-44';
+export const SNIPER_RECORDING = 'weapon-longwatch-50';
+export const LMG_RECORDING = 'weapon-bastion-m60';
+export const SMG_RECORDING = 'weapon-v9-stinger';
+export const PISTOL_RELOAD_RECORDING = 'reload-m19-sidearm';
+export const PISTOL_RECORDING = 'weapon-m19-sidearm';
+export const SHOTGUN_RECORDING = 'weapon-breacher-12';
 export const GUN_AUDIO = {
   pistol: [PISTOL_RECORDING, 1, .66], smg: [SMG_RECORDING, 1, .48], shotgun: [SHOTGUN_RECORDING, 1, .78],
-  rifle: ['shot-rifle', 1, .69], revolver: ['shot-revolver', 1, .72], assault: ['shot-assault', 1, .57],
-  lmg: ['shot-lmg', 1, .63], sniper: ['shot-sniper', 1, .81],
+  rifle: [RIFLE_RECORDING, 1, .69], revolver: [REVOLVER_RECORDING, 1, .72], assault: ['weapon-vanguard-a4', 1, .57],
+  lmg: [LMG_RECORDING, 1, .63], sniper: [SNIPER_RECORDING, 1, .81],
 };
 export const GUN_RECORDINGS = {
   pistol: 'Freesound Community · 9mm pistol shot', smg: 'Moniker Subriquet · SMG shot', shotgun: 'Dragon Studio · gunshot-372470',
-  rifle: 'SKS · semi-auto', revolver: 'Smith & Wesson 642 · revolver', assault: 'AR-15 · carbine',
-  lmg: 'AK-47 · automatic rifle', sniper: 'Tikka T3 · bolt-action',
+  rifle: '49053354 · machine gun', revolver: 'Freesound Community · single gunshot 62 HP', assault: 'AR-15 · carbine',
+  lmg: 'Sovetsky Rastov72 · M249 · 0.5s cut', sniper: 'Freesound Community · sniper rifle',
 };
-export const ZOMBIE_RECORDING = 'freesound_community-zombie-6851';
-export const BOSS_RECORDING = 'u_klymi2aebc-zombie-screech-sound-effect-312865-446996';
+export const ZOMBIE_RECORDING = 'zombie-growl';
+export const BOSS_RECORDING = 'boss-screech';
+// MP3 decoding can produce peaks above 1; linear attenuation preserves its timbre.
+export function normalizeRecording(buffer) {
+  let peak = 0;
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const samples = buffer.getChannelData(channel);
+    for (const value of samples) peak = Math.max(peak, Math.abs(value));
+  }
+  if (peak > .9) for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const samples = buffer.getChannelData(channel), scale = .9 / peak;
+    for (let i = 0; i < samples.length; i++) samples[i] *= scale;
+  }
+  return buffer;
+}
 // Local firearm recordings and procedural horror ambience; no background timers.
 export class HorrorAudio {
   constructor(context) {
     this.context = context; this.master = context.createGain();
     this.master.gain.value = 0; this.master.connect(context.destination);
+    this.ambienceTrack = null;
     this.enabled = false; this.nodes = []; this.sources = []; this.voices = new Set();
-    this.reloadStep = -1; this.gunBuffers = new Map(); this.gunLoading = null;
+    this.reloadStep = -1; this.gunBuffers = new Map(); this.audioLoads = new Map();
     this.nextPulse = 0; this.nextCreak = 0; this.nextGrowl = 0;
     const length = context.sampleRate * 3;
     this.noise = context.createBuffer(1, length, context.sampleRate);
@@ -46,15 +65,20 @@ export class HorrorAudio {
     osc.onended = () => { osc.disconnect(); gain.disconnect(); this.voices.delete(voice); };
     osc.start(start); osc.stop(start + duration);
   }
-  loadWeaponAudio() {
-    if (this.gunLoading) return this.gunLoading;
-    this.gunLoading = Promise.allSettled([...new Set(Object.values(GUN_AUDIO).map(profile => profile[0])), 'reload-out', 'reload-in', 'reload-bolt', PISTOL_RELOAD_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING].filter(id => !this.gunBuffers.has(id)).map(async id => {
-      const response = await fetch(new URL(`./audio/${id}.${[ZOMBIE_RECORDING, BOSS_RECORDING, SHOTGUN_RECORDING, PISTOL_RECORDING, PISTOL_RELOAD_RECORDING, SMG_RECORDING].includes(id) ? 'mp3' : 'wav'}`, import.meta.url));
-      if (!response.ok) throw new Error('Audio unavailable');
-      const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
-      this.gunBuffers.set(id, buffer);
-    })).finally(() => { this.gunLoading = null; });
-    return this.gunLoading;
+  loadWeaponAudio(ids = [...Object.values(GUN_AUDIO).map(profile => profile[0]), 'reload-out', 'reload-in', 'reload-bolt', PISTOL_RELOAD_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING, AMBIENCE_RECORDING]) {
+    return Promise.allSettled([...new Set(ids)].filter(id => !this.gunBuffers.has(id)).map(id => {
+      if (!this.audioLoads.has(id)) {
+        const loading = (async () => {
+          const extension = [ZOMBIE_RECORDING, BOSS_RECORDING, SHOTGUN_RECORDING, PISTOL_RECORDING, PISTOL_RELOAD_RECORDING, SMG_RECORDING, LMG_RECORDING, SNIPER_RECORDING, REVOLVER_RECORDING, RIFLE_RECORDING, AMBIENCE_RECORDING].includes(id) ? 'mp3' : 'wav';
+          const response = await fetch(new URL(`./audio/${id}.${extension}`, import.meta.url), { signal: AbortSignal.timeout(15000) });
+          if (!response.ok) throw new Error('Audio unavailable');
+          const buffer = await this.context.decodeAudioData(await response.arrayBuffer());
+          this.gunBuffers.set(id, normalizeRecording(buffer));
+        })().finally(() => this.audioLoads.delete(id));
+        this.audioLoads.set(id, loading);
+      }
+      return this.audioLoads.get(id);
+    }));
   }
   gunshot(id) {
     if (!this.enabled) return false;
@@ -134,8 +158,17 @@ export class HorrorAudio {
     osc.onended = () => { osc.disconnect(); gain.disconnect(); extras.forEach(n => n.disconnect()); this.voices.delete(voice); };
     osc.start(); osc.stop(t + duration);
   }
+  startHorrorBed() {
+    const buffer = this.gunBuffers.get(AMBIENCE_RECORDING);
+    if (!this.enabled || this.ambienceTrack || !buffer) return;
+    const c = this.context, source = c.createBufferSource(), gain = c.createGain();
+    source.buffer = buffer; source.loop = true;
+    gain.gain.setValueAtTime(0, c.currentTime); gain.gain.linearRampToValueAtTime(.06, c.currentTime + 1.5);
+    source.connect(gain); gain.connect(this.master); source.start();
+    this.sources.push(source); this.nodes.push(gain); this.ambienceTrack = source;
+  }
   startAmbience() {
-    if (this.sources.length) return;
+    if (this.sources.length) { this.startHorrorBed(); return; }
     const c = this.context, bus = c.createGain(); bus.gain.value = .022; bus.connect(this.master);
     const filter = c.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 370; filter.Q.value = .7;
     filter.connect(bus);
@@ -150,10 +183,11 @@ export class HorrorAudio {
     this.sources.forEach(n => n.start()); this.droneGain = droneGain;
     this.nextGrowl = c.currentTime + .5;
     this.nextPulse = c.currentTime; this.nextCreak = c.currentTime + 5;
+    this.startHorrorBed();
   }
   stopAmbience() {
     this.sources.forEach(n => { n.stop(); n.disconnect(); }); this.nodes.forEach(n => n.disconnect());
-    this.sources = []; this.nodes = []; this.droneGain = null;
+    this.sources = []; this.nodes = []; this.droneGain = null; this.ambienceTrack = null;
   }
   update({ playing, health, boss, wave, enemies = [], player, weapon, reload = 0, reloadTime = 1 }) {
     if (!this.enabled || !playing) {

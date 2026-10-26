@@ -2,7 +2,7 @@ import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS } from './engine.mjs
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement } from './input.mjs';
-import { HorrorAudio, GUN_RECORDINGS } from './audio.mjs';
+import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
 import { cameraOffset, pointerToWorld } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
@@ -323,7 +323,9 @@ async function previewSound(id, zombie = false, reload = false) {
   $('sound-button').textContent = 'SOUND ON'; $('sound-button').setAttribute('aria-label', 'ปิดเสียงเกม');
   if (!soundscape) { $('shop-feedback').textContent = 'เบราว์เซอร์นี้เปิดเสียงไม่ได้'; return; }
   await audio.resume().catch(() => {});
-  await soundscape.loadWeaponAudio();
+  const samples = reload ? (id === 'pistol' ? [PISTOL_RELOAD_RECORDING] : ['reload-out', 'reload-in', 'reload-bolt'])
+    : zombie ? [id === 'boss' ? BOSS_RECORDING : ZOMBIE_RECORDING] : [GUN_AUDIO[id][0]];
+  await soundscape.loadWeaponAudio(samples);
   if (request !== previewRequest || !$('armory').open || !soundEnabled) return;
   soundscape.stopVoices();
   if (reload) { const duration = game.weaponStats(id).reloadTime; [0,.4,.78].forEach((part, step) => soundscape.reloadEffect(id, step, duration * part, duration)); $('shop-feedback').textContent = 'กำลังลองเสียงรีโหลด · ถอด / เติม / ขึ้นลำ'; }

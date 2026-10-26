@@ -52,7 +52,7 @@ npm run check
 npm test
 ```
 
-`dist/` เป็นเว็บ static พร้อมเผยแพร่: `engine.mjs` ดูแล simulation, `game.mjs` วาด Canvas และเชื่อม UI, `style.css` จัดหน้าจอ ภาพทั้งหมดวาดด้วย Canvas เสียงสังเคราะห์ด้วย Web Audio ฟอนต์โหลดจาก Google Fonts และมีฟอนต์สำรองในเครื่อง
+`dist/` เป็นเว็บ static พร้อมเผยแพร่: `engine.mjs` ดูแล simulation, `game.mjs` วาด Canvas และเชื่อม UI, `style.css` จัดหน้าจอ ภาพทั้งหมดวาดด้วย Canvas เสียงบันทึกและเสียงสังเคราะห์เล่นผ่าน Web Audio ฟอนต์โหลดจาก Google Fonts และมีฟอนต์สำรองในเครื่อง
 
 การตั้งค่า Sites อยู่ใน `.openai/hosting.json` ใช้ source workflow ของ Sites เพื่อ commit, push และบรรจุไฟล์ก่อนเผยแพร่
 
@@ -62,19 +62,19 @@ Each of the 10 waves ends with a named boss, from THE WARDEN to PATIENT ZERO. Bo
 
 ## Horror audio
 
-Click SOUND ON to enable procedural wind, a slowly beating low drone, occasional distant creaks, a boss warning sting, and a double heartbeat during boss fights or below 30% health. Low health speeds up the pulse. Ambience stops while paused, in the shop/manual, or outside the active tab; SOUND OFF also cancels scheduled effects immediately. Audio uses Web Audio after a user gesture and needs no external audio files.
+Click SOUND ON to enable procedural wind, a slowly beating low drone, occasional distant creaks, a boss warning sting, and a double heartbeat during boss fights or below 30% health. Low health speeds up the pulse. Ambience stops while paused, in the shop/manual, or outside the active tab; SOUND OFF also cancels scheduled effects immediately. Audio uses Web Audio after a user gesture. Recordings ship in dist/audio/. The selected horror-trailer MP3 loops quietly at gain 0.06 with a 1.5-second fade-in.
 
 ## Combat readability update
 
 Late bosses alternate attack patterns and enter a faster second phase below half health. PATIENT ZERO cycles all three attacks and adds a third phase below 25%; enraged acid attacks mark three impact areas. Each area is shown before damage. Shotgun damage is 18 per pellet (108 per shell), with collision-safe knockback and a short stagger on regular enemies. Bosses resist knockback. The HUD counts active and pending enemies, and a three-second warning precedes the boss spawn. Gameplay controls, weapon stats and help text use larger labels.
 
-Zombie vocalizations are synthesized locally: walkers groan, runners snarl briefly, and brutes/bosses use deeper growls. The nearest living enemy within 560 world units vocalizes at intervals; volume increases nearby and stereo position follows its side of the player. Muting, pausing, or hiding the tab cancels vocalizations with the other game audio.
+Ordinary zombies use the selected zombie MP3; bosses use a separate screech MP3, including a full-speed entrance cue. Procedural voices are a load-failure fallback. The nearest living enemy within 560 world units vocalizes at intervals; volume increases nearby and stereo position follows its side of the player. Muting, pausing, or hiding the tab cancels vocalizations with the other game audio.
 
 ## Eight-weapon arsenal and audio checks
 
 Added JUDGE .44 revolver (300 CR), VANGUARD A4 assault rifle (650 CR), BASTION M60 LMG (950 CR), and LONGWATCH .50 sniper (1200 CR). They use the existing shared reserve and run-only ownership. Shop range labels explain close-range versus long-range tradeoffs.
 
-Every weapon card has a sound preview; the shop also previews all four zombie types. Preview buttons enable sound after the click, cancel stale preview requests, and stop playback when closing the shop. Gunshots use four edited CC0 live-fire recordings by Tabasco (pistol, shotgun, rifle, SKS), with per-weapon pitch/level variations. See dist/audio/CREDITS.md for source and processing. Failed sample loads fall back to synthesis and can retry. Zombie voices remain procedural, with proximity and stereo positioning.
+Every weapon card has a sound preview; the shop also previews all four zombie types. Preview buttons enable sound after the click, cancel stale preview requests, and stop playback when closing the shop. Gunshots use the selected user-supplied MP3s, with the AR-15 WAV retained for VANGUARD A4. See dist/audio/CREDITS.md for file assignments and processing. Failed loads fall back to synthesis and retry on the next load request. Preview buttons wait only for the selected effect, sharing in-flight requests with background preload; stalled downloads time out after 15 seconds. Decoded peaks above 0.9 are reduced with linear gain to preserve pitch and waveform shape. Proximity and stereo positioning apply to zombie voices.
 
 ## Zombie visuals
 
@@ -96,7 +96,7 @@ The armory prioritizes purchase/equip actions, groups audio previews as secondar
 
 ## Matched firearm recordings
 
-Gunshot playback now uses eight distinct CC0 recordings from The Free Firearm Sound Library. The SMG uses Carl Gustav M45, revolver uses S&W 642, shotgun uses Benelli Nova, assault rifle uses AR-15, and sniper uses a Tikka T3 bolt-action report. The LMG uses an AK-47 report as a heavier automatic-weapon substitute. Shop preview feedback and button tooltips identify each source model. All sample files are shipped with the site, trimmed to single shots, and peak-normalized. See dist/audio/CREDITS.md and recording-manifest.json for provenance and processing.
+Seven weapons now use user-selected MP3 recordings; VANGUARD A4 retains the CC0 AR-15 WAV. Shop previews identify the selected source. MP3s keep their original playback speed; the M249 source assigned to BASTION M60 uses the selected 0.5-second cut and tail fade. M19 uses its own full 9mm reload recording with a 2.22-second base reload time. See dist/audio/CREDITS.md for current mappings; recording-manifest.json describes the legacy WAV preparation only.
 
 ## Survivor selection
 
@@ -104,3 +104,21 @@ Before starting, choose a female Scout (80 HP, speed 225) or male Guard
 (120 HP, speed 175). Movement and sprint use the selected speed; health
 pickups and upgrades respect that character's maximum HP. The choice stays
 selected through retries and difficulty changes and can be changed in the menu.
+
+## Versioning
+
+`package.json` is the version source. Run `npm run version:patch` to advance
+1.0.0 → 1.0.1 → 1.0.2 for each prepared release. This runs checks and tests,
+then npm updates the package version and synchronizes the label in the game.
+It does not commit, create a Git tag, push or deploy. `npm run version:sync`
+refreshes the label without incrementing. `npm run check` rejects a stale label;
+`npm run dev` synchronizes it before starting. Reloading the page does not bump
+the version.
+
+Runtime audio names match their purpose: `weapon-m19-sidearm.mp3`,
+`weapon-v9-stinger.mp3`, `weapon-breacher-12.mp3`, `weapon-ranger-r8.mp3`,
+`weapon-judge-44.mp3`, `weapon-vanguard-a4.wav`, `weapon-bastion-m60.mp3`,
+`weapon-longwatch-50.mp3`, `reload-m19-sidearm.mp3`, `zombie-growl.mp3`,
+`boss-screech.mp3`, `ambience-horror.mp3`. Original source filenames are mapped
+in `dist/audio/CREDITS.md`; unused source clips are kept in `audio-source/`
+and are not served or deployed.

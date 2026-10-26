@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HorrorAudio, GUN_AUDIO, SMG_RECORDING, PISTOL_RELOAD_RECORDING, PISTOL_RECORDING, SHOTGUN_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING } from '../dist/audio.mjs';
+import { HorrorAudio, normalizeRecording, GUN_AUDIO, AMBIENCE_RECORDING, RIFLE_RECORDING, REVOLVER_RECORDING, SNIPER_RECORDING, LMG_RECORDING, SMG_RECORDING, PISTOL_RELOAD_RECORDING, PISTOL_RECORDING, SHOTGUN_RECORDING, ZOMBIE_RECORDING, BOSS_RECORDING } from '../dist/audio.mjs';
 function context() {
   const param = () => ({ value: 0, cancelScheduledValues() {}, setValueAtTime(v) { this.value = v; }, exponentialRampToValueAtTime() {}, linearRampToValueAtTime(v) { this.peak = v; }, setTargetAtTime(v) { this.value = v; } });
   const nodes = [];
@@ -68,12 +68,12 @@ test('missing gun samples use a playable fallback', () => {
 
 test('failed sample loads retry without redownloading successful samples', async () => {
   const originalFetch=globalThis.fetch, counts=new Map();
-  globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('rifle.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
+  globalThis.fetch=async url=>{const key=String(url);const count=(counts.get(key)||0)+1;counts.set(key,count);return {ok:!key.endsWith('weapon-vanguard-a4.wav')||count>1,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
-    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,13);
     await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,14);
-    assert.equal([...counts.values()].reduce((a,b)=>a+b),15);
+    await a.loadWeaponAudio();assert.equal(a.gunBuffers.size,15);
+    assert.equal([...counts.values()].reduce((a,b)=>a+b),16);
   } finally {globalThis.fetch=originalFetch;}
 });
 
@@ -108,7 +108,7 @@ test('loader fetches the selected zombie MP3 once and shares it across types', a
   try {
     const c=context();c.decodeAudioData=async()=>({duration:1.824});const a=new HorrorAudio(c);
     await a.loadWeaponAudio();await a.loadWeaponAudio();
-    const zombieUrls=urls.filter(url=>url.includes('zombie'));
+    const zombieUrls=urls.filter(url=>[ZOMBIE_RECORDING,BOSS_RECORDING].some(id=>url.endsWith(`${id}.mp3`)));
     assert.equal(zombieUrls.length,2);
     for(const id of [ZOMBIE_RECORDING,BOSS_RECORDING]) assert.equal(zombieUrls.filter(url=>url.endsWith(`${id}.mp3`)).length,1);
   } finally {globalThis.fetch=originalFetch;}
@@ -126,13 +126,13 @@ test('boss entrance uses its own full-speed screech once and defers ambient grow
   a.setEnabled(false);assert.ok(voice.osc.stopped);assert.equal(a.bossEntrance(),undefined);assert.equal(a.voices.size,0);
 });
 
-test('pistol, shotgun and SMG load their selected MP3 and shoot at original pitch', async () => {
+test('selected weapons load their selected MP3 and shoot at original pitch', async () => {
   const originalFetch=globalThis.fetch, urls=[];
   globalThis.fetch=async url=>{urls.push(String(url));return {ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};};
   try {
     const c=context();c.decodeAudioData=async()=>({duration:3.082});const a=new HorrorAudio(c);
     await a.loadWeaponAudio();a.setEnabled(true);
-    for(const [weapon,recording] of [['pistol',PISTOL_RECORDING],['shotgun',SHOTGUN_RECORDING],['smg',SMG_RECORDING]]) {
+    for(const [weapon,recording] of [['pistol',PISTOL_RECORDING],['shotgun',SHOTGUN_RECORDING],['smg',SMG_RECORDING],['lmg',LMG_RECORDING],['sniper',SNIPER_RECORDING],['revolver',REVOLVER_RECORDING],['rifle',RIFLE_RECORDING]]) {
       assert.ok(urls.some(url=>url.endsWith(`${recording}.mp3`)));
       assert.ok(urls.some(url=>url.endsWith(`${PISTOL_RELOAD_RECORDING}.mp3`)));
       assert.ok(!urls.some(url=>url.endsWith(`shot-${weapon}.wav`)));
@@ -153,4 +153,52 @@ test('9mm reload plays the supplied full clip once across all reload stages', ()
   a.stopVoices();a.reloadEffect('pistol',0,0,1.665);
   assert.ok(Math.abs([...a.voices][0].osc.playbackRate.value-4/3)<.001);
   a.setEnabled(false);assert.equal(a.voices.size,0);
+});
+
+test('quiet horror bed starts after loading, stays single and stops on pause or mute', () => {
+  const a=new HorrorAudio(context());a.setEnabled(true);a.update(calm);
+  assert.equal(a.ambienceTrack,null);
+  const buffer={duration:33.28};a.gunBuffers.set(AMBIENCE_RECORDING,buffer);a.update(calm);
+  const track=a.ambienceTrack;assert.equal(track.buffer,buffer);assert.equal(track.loop,true);
+  const gain=a.nodes.at(-1);assert.equal(gain.gain.peak,.06);
+  for(let i=0;i<100;i++)a.update(calm);assert.equal(a.ambienceTrack,track);assert.equal(a.sources.length,5);
+  a.update({...calm,playing:false});assert.ok(track.stopped&&track.disconnected);assert.equal(a.ambienceTrack,null);
+  a.update(calm);assert.notEqual(a.ambienceTrack,track);
+  const restarted=a.ambienceTrack;a.setEnabled(false);assert.ok(restarted.stopped);assert.equal(a.sources.length,0);
+});
+
+test('loader fetches the selected horror MP3', async () => {
+  const originalFetch=globalThis.fetch,urls=[];
+  globalThis.fetch=async url=>{urls.push(String(url));return {ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};};
+  try {
+    const c=context();c.decodeAudioData=async()=>({duration:33.28});const a=new HorrorAudio(c);
+    await a.loadWeaponAudio();assert.ok(urls.some(url=>url.endsWith(`${AMBIENCE_RECORDING}.mp3`)));
+  } finally {globalThis.fetch=originalFetch;}
+});
+
+test('decoded over-range recordings are attenuated linearly across stereo channels', () => {
+  const channels=[new Float32Array([0,2.25,-1.125]),new Float32Array([.225,-.45,0])];
+  const buffer={numberOfChannels:2,getChannelData:i=>channels[i]};
+  assert.equal(normalizeRecording(buffer),buffer);
+  assert.ok(Math.abs(channels[0][1]-.9)<1e-6);assert.ok(Math.abs(channels[0][2]+.45)<1e-6);
+  assert.ok(Math.abs(channels[1][0]-.09)<1e-6);
+  const quiet=new Float32Array([0,.2,-.4]);normalizeRecording({numberOfChannels:1,getChannelData:()=>quiet});
+  assert.deepEqual(quiet,new Float32Array([0,.2,-.4]));
+});
+
+test('selected audio can finish while ambience is still loading and shares pending fetches', async () => {
+  const originalFetch=globalThis.fetch,counts=new Map();let release;
+  const waiting=new Promise(resolve=>release=resolve);
+  globalThis.fetch=async url=>{
+    const key=String(url);counts.set(key,(counts.get(key)||0)+1);
+    if(key.endsWith(`${AMBIENCE_RECORDING}.mp3`)) await waiting;
+    return {ok:true,arrayBuffer:async()=>new ArrayBuffer(4)};
+  };
+  try {
+    const c=context();c.decodeAudioData=async()=>({duration:.5});const a=new HorrorAudio(c);
+    const all=a.loadWeaponAudio();await a.loadWeaponAudio([PISTOL_RECORDING]);
+    assert.ok(a.gunBuffers.has(PISTOL_RECORDING));assert.ok(!a.gunBuffers.has(AMBIENCE_RECORDING));
+    assert.equal([...counts.entries()].find(([url])=>url.endsWith(`${PISTOL_RECORDING}.mp3`))[1],1);
+    release();await all;assert.ok(a.gunBuffers.has(AMBIENCE_RECORDING));assert.equal(a.audioLoads.size,0);
+  } finally {release();globalThis.fetch=originalFetch;}
 });
