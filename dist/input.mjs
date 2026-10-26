@@ -22,7 +22,7 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     stickId = null; held.clear(); input.x = input.y = 0;
     input.firing = input.sprinting = false; input.aim = null; fireOrigin = null; knob.style.transform = '';
     fire.style.setProperty('--aim-x', '0px'); fire.style.setProperty('--aim-y', '0px');
-    fire.classList.remove('held'); sprint.classList.remove('held');
+    fire.classList.remove('held', 'aiming'); sprint.classList.remove('held');
   }
   function drag(e) {
     const r = stick.getBoundingClientRect(), radius = Math.max(1, (r.width - knob.offsetWidth) / 2);
@@ -50,14 +50,20 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, e => {
       if (held.get(action) !== e.pointerId) return;
       held.delete(action); input[action] = false; button.classList.remove('held');
-      if (action === 'firing') { input.aim = null; fireOrigin = null; fire.style.setProperty('--aim-x', '0px'); fire.style.setProperty('--aim-y', '0px'); }
+      if (action === 'firing') { input.aim = null; fireOrigin = null; fire.classList.remove('aiming'); fire.style.setProperty('--aim-x', '0px'); fire.style.setProperty('--aim-y', '0px'); }
     });
   }
   fire.addEventListener('pointermove', e => {
     if (held.get('firing') !== e.pointerId || !fireOrigin) return;
     e.preventDefault();
     const dx = e.clientX - fireOrigin.x, dy = e.clientY - fireOrigin.y, length = Math.hypot(dx, dy);
-    if (length < 10) return;
+    // A wider start zone ignores normal finger jitter; returning to center stops fire.
+    if (length < (input.firing ? 16 : 24)) {
+      input.aim = null; input.firing = false; fire.classList.remove('aiming');
+      fire.style.setProperty('--aim-x', '0px'); fire.style.setProperty('--aim-y', '0px');
+      return;
+    }
+    fire.classList.add('aiming');
     input.aim = { x: dx / length, y: dy / length }; input.firing = true;
     const radius = Math.min(24, length);
     fire.style.setProperty('--aim-x', `${input.aim.x * radius}px`);

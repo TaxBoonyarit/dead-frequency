@@ -147,8 +147,7 @@ only its action; pausing, switching modes or leaving the app resets all controls
 Buttons have at least 48px targets and the layout supports portrait and landscape.
 
 Touch FIRE uses the initial finger position as its aiming center, so the thumb
-can slide outside the button while pointer capture keeps control. A 10px dead
-zone prevents firing before a direction is selected. No automatic target locking is used. A direction arrow and spread cone
+can slide outside the button while pointer capture keeps control. A 24px start zone ignores small finger movements before firing begins. Returning within 16px of the initial touch stops firing and clears the direction. No automatic target locking is used. A direction arrow and spread cone
 show the shot direction. Lifting the firing finger, cancelling touch, pausing
 or switching control mode clears the manual aim and stops firing.
 

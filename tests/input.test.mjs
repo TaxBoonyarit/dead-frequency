@@ -112,3 +112,19 @@ test('holding FIRE does not shoot or target an enemy until a drag direction is s
   assert.ok(Math.abs(g.player.angle+Math.PI/2)<1e-9);
   fire.send('pointerup',2);assert.equal(input.firing,false);assert.equal(input.aim,null);
 });
+
+test('finger jitter never fires; returning to the center stops firing until another deliberate drag', async () => {
+  const {bindTouchControls}=await import('../dist/input.mjs');
+  const stick=element(),knob=element(),fire=element(),sprint=element();
+  const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
+  fire.send('pointerdown',2);
+  for(const offset of [2,8,12,18,23]) {
+    fire.send('pointermove',2,46+offset,46);assert.equal(input.firing,false);assert.equal(input.aim,null);
+  }
+  fire.send('pointermove',2,76,46);assert.equal(input.firing,true);assert.deepEqual(input.aim,{x:1,y:0});
+  fire.send('pointermove',2,66,46);assert.equal(input.firing,true);
+  fire.send('pointermove',2,58,46);assert.equal(input.firing,false);assert.equal(input.aim,null);
+  fire.send('pointermove',2,66,46);assert.equal(input.firing,false);
+  fire.send('pointermove',2,46,16);assert.equal(input.firing,true);assert.deepEqual(input.aim,{x:0,y:-1});
+  fire.send('pointerup',2);assert.equal(input.firing,false);assert.equal(input.aim,null);
+});
