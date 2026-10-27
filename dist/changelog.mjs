@@ -1,5 +1,9 @@
 // Player-facing release notes, newest first. The first entry must match package.json.
 export const CHANGELOG = [
+  { version: '1.0.10', date: '2026-10-27', changes: [
+    { type: 'new', text: 'กระสุนในแมกและสำรองหมดจะเปลี่ยนเป็นมีดอัตโนมัติ ใช้ปุ่มโจมตีเดิมเพื่อฟันระยะประชิด พร้อมวงแสดงระยะ' },
+    { type: 'improved', text: 'เก็บกระสุนขณะถือมีดแล้วกลับไปถือปืนเดิมและเริ่มรีโหลดอัตโนมัติ' },
+  ] },
   { version: '1.0.9', date: '2026-10-27', changes: [
     { type: 'new', text: 'กดป้ายเวอร์ชันมุมขวาบนเพื่อดูบันทึกการอัปเดต และมีจุดเตือนเมื่อมีเวอร์ชันใหม่' },
     { type: 'new', text: 'ปุ่ม “กันจอดับ” ให้หน้าจอมือถือไม่ดับระหว่างเล่น' },

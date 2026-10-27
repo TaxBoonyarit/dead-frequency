@@ -1,6 +1,6 @@
 import { bindWakeLock } from './wake-lock.mjs';
 import { bindChangelog } from './changelog.mjs';
-import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO } from './engine.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO, KNIFE } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
@@ -144,12 +144,18 @@ function drawBody(e, isPlayer = false) {
     circle(ctx, 0, 0, 12, character.color); rect(ctx, -9, -9, 9, 18, '#364b35');
     circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
     const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
-    rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
+    if (game.usingKnife) {
+      rect(ctx, 10, -3, 12, 6, '#655746');
+      line(ctx, [[22, -7], [22, 7]], '#b5bfa8', 3);
+      ctx.fillStyle = '#d7e5dc'; ctx.beginPath(); ctx.moveTo(24, -3); ctx.lineTo(43, 0); ctx.lineTo(24, 4); ctx.fill();
+    } else {
+      rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
+    }
     circle(ctx, 1, 0, 8, '#c2ad88');
     if (game.characterId === 'female') { circle(ctx, -3, 0, 7, '#302920'); circle(ctx, -11, 0, 4, '#302920'); }
     else { circle(ctx, 0, -1, 7, character.color); line(ctx, [[-5, 0], [5, 0]], '#d6d9ae88', 2); }
     line(ctx, [[-3, -6], [4, -4]], '#bac38c88', 2);
-    if (game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
+    if (!game.usingKnife && game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
       ctx.fillStyle = '#ffe4a2'; ctx.beginPath(); ctx.moveTo(31, -4); ctx.lineTo(48, -9); ctx.lineTo(42, 0); ctx.lineTo(49, 6); ctx.lineTo(31, 3); ctx.fill();
     }
   }
@@ -191,6 +197,12 @@ function render(now) {
   const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 340); beam.addColorStop(0, '#e2e6ac27'); beam.addColorStop(1, '#e2e6ac00');
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(5, 0); ctx.arc(0, 0, 340, -.38, .38); ctx.closePath(); ctx.fill(); ctx.restore();
   if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(touchInput.x, touchInput.y) > .1) ? game.time * 14 : 0 }, true);
+  if (game.usingKnife || game.slash) {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(game.slash?.angle ?? p.angle);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, KNIFE.range, -KNIFE.arc / 2, KNIFE.arc / 2); ctx.closePath();
+    ctx.fillStyle = game.slash ? '#dcf4dd44' : '#9ce4ce12'; ctx.fill();
+    ctx.strokeStyle = game.slash ? '#e6ffee' : '#9ce4ce88'; ctx.lineWidth = game.slash ? 3 : 1; ctx.stroke(); ctx.restore();
+  }
   if (game.gun.reload > 0) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();
   }
@@ -203,10 +215,10 @@ function render(now) {
   if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, viewHeight); }
   // Subtle surveillance scan lines.
   ctx.fillStyle = '#0000000a'; for (let y = 0; y < viewHeight; y += 4) ctx.fillRect(0, y, viewWidth, 1);
-  if (touchMode && game.state === 'playing') {
+  if (touchMode && game.state === 'playing' && !game.usingKnife) {
     drawTouchAim(ctx, { x: p.x - cameraX, y: p.y - cameraY, angle: p.angle, width: viewWidth, height: viewHeight, scale: viewHeight / viewport.clientHeight, spread: game.accuracySpread(), active: !!touchInput.aim, reloading: game.gun.reload > 0 });
   }
-  if (pointer && game.state === 'playing' && !touchMode) {
+  if (pointer && game.state === 'playing' && !touchMode && !game.usingKnife) {
     const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y - cameraY;
     const radius = Math.max(7, Math.min(36, Math.hypot(aim.x - p.x, aim.y - p.y) * Math.tan(game.accuracySpread() / 2)));
     ctx.strokeStyle = '#d5e69a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
@@ -242,8 +254,8 @@ function updateHUD() {
   $('stamina-bar').style.width = `${p.stamina}%`;
   $('threat-count').textContent = `เหลือ ${game.remaining + game.enemies.length} ตัว${game.remaining === 1 ? ' · บอสกำลังมา' : ''}`;
   $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
-  $('ammo-label').innerHTML = `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
-  $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : g.ammo === 0 && g.reserve === 0 ? 'FIND AMMO' : WEAPONS.find(w => w.id === game.weaponId).name;
+  $('ammo-label').innerHTML = game.usingKnife ? '∞ <small>มีด</small>' : `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
+  $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : game.usingKnife ? 'KNIFE / ระยะประชิด' : WEAPONS.find(w => w.id === game.weaponId).name;
   const boss = game.enemies.find(e => e.type === 'boss');
   $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
   if (boss) { $('boss-name').textContent = `${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
@@ -465,6 +477,7 @@ function frame(now) {
   game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing && !!touchInput.aim : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
   for (const e of game.events.splice(0)) {
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
+    if (e.type === 'slash') tone(180, .08, 'triangle', .035, 60);
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);

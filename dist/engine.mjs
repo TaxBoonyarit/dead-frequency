@@ -5,6 +5,7 @@ export const CHARACTERS = [
 ];
 export const W = 1280, H = 800;
 export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
+export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .16 };
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .024, range: .9 },
   { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .075, range: .75 },
@@ -141,6 +142,7 @@ export class Game {
     this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: AMMO.start, cooldown: 0, reload: 0, bloom: 0 };
+    this.knifeCooldown = 0; this.slash = null;
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
@@ -202,9 +204,13 @@ export class Game {
     g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
     this.state = 'playing'; this.nextWave();
   }
+  get usingKnife() { return this.gun.ammo <= 0 && this.gun.reserve <= 0; }
   addReserve(amount) {
+    const wasKnife = this.usingKnife;
     const added = Math.max(0, Math.min(amount, AMMO.maxReserve - this.gun.reserve));
-    this.gun.reserve += added; return added;
+    this.gun.reserve += added;
+    if (wasKnife && added > 0) this.reload();
+    return added;
   }
   accuracySpread() {
     const p = this.player, g = this.gun;
@@ -214,7 +220,9 @@ export class Game {
   }
   shoot() {
     const g = this.gun, p = this.player;
-    if (this.state !== 'playing' || this.clearClock > 0 || g.cooldown > 0 || g.reload > 0) return;
+    if (this.state !== 'playing' || this.clearClock > 0) return;
+    if (this.usingKnife) { this.swingKnife(); return; }
+    if (g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     const cone = this.accuracySpread();
     for (let i = 0; i < g.pellets; i++) {
@@ -226,6 +234,32 @@ export class Game {
     g.bloom = Math.min(1, g.bloom + .18);
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
     this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
+  }
+  swingKnife() {
+    if (this.knifeCooldown > 0) return;
+    const p = this.player;
+    this.knifeCooldown = KNIFE.interval;
+    this.slash = { angle: p.angle, life: KNIFE.swingTime };
+    this.emit('slash');
+    for (const e of this.enemies) {
+      const dx = e.x - p.x, dy = e.y - p.y;
+      const angle = Math.atan2(Math.sin(Math.atan2(dy, dx) - p.angle), Math.cos(Math.atan2(dy, dx) - p.angle));
+      if (e.hp > 0 && Math.hypot(dx, dy) <= KNIFE.range && Math.abs(angle) <= KNIFE.arc / 2 && clearLine(p.x, p.y, e.x, e.y, 0, this.obstacles)) {
+        this.damageEnemy(e, KNIFE.damage);
+      }
+    }
+  }
+  damageEnemy(e, damage) {
+    e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(e.x, e.y, '#a0ab64', 6);
+    if (e.hp > 0) return;
+    const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
+    this.kills++; this.score += reward * 10; this.credits += reward;
+    this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
+    if (this.stains.length > 80) this.stains.shift();
+    const roll = this.random();
+    if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
+    if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
+    this.emit('kill');
   }
   burst(x, y, color, count, force = 70) {
     for (let i = 0; i < count; i++) { const a = this.random() * Math.PI * 2, s = this.random() * force; this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .2 + this.random() * .35, color }); }
@@ -302,6 +336,8 @@ export class Game {
     if (this.state !== 'playing') return;
     dt = Math.min(dt, .05); this.time += dt; this.banner = Math.max(0, this.banner - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
     const p = this.player, g = this.gun;
+    this.knifeCooldown = Math.max(0, this.knifeCooldown - dt);
+    if (this.slash) { this.slash.life -= dt; if (this.slash.life <= 0) this.slash = null; }
     g.bloom = Math.max(0, g.bloom - dt * 1.2);
     p.invulnerable = Math.max(0, p.invulnerable - dt); g.cooldown = Math.max(0, g.cooldown - dt);
     if (g.reload > 0) {
@@ -323,6 +359,7 @@ export class Game {
     this.pathClock -= dt;
     if (this.pathClock <= 0) { this.paths.clear(); this.pathClock = .35; }
     for (const e of this.enemies) {
+      if (e.hp <= 0) continue;
       if (e.type === 'boss') this.updateBoss(e, dt);
       e.stagger = Math.max(0, (e.stagger || 0) - dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
@@ -366,17 +403,7 @@ export class Game {
             move(e, b.vx / length * distance, b.vy / length * distance, e.r, this.obstacles);
             if (e.type !== 'boss') e.stagger = .45;
           }
-          e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
-          if (e.hp <= 0) {
-            const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            this.kills++; this.score += reward * 10; this.credits += reward;
-            this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
-            if (this.stains.length > 80) this.stains.shift();
-            const roll = this.random();
-            if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
-            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
-            this.emit('kill');
-          }
+          b.life = 0; this.damageEnemy(e, b.damage);
         }
       }
       b.x = nx; b.y = ny;
