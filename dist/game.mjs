@@ -1,4 +1,5 @@
 import { bindWakeLock } from './wake-lock.mjs';
+import { bindChangelog } from './changelog.mjs';
 import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
@@ -14,7 +15,7 @@ let touchTutorialSeen = false;
 const keys = new Set();
 let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, cameraY = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, soundscape = null, pausedForManual = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
+let soundEnabled = false, audio = null, soundscape = null, pausedForDialog = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -412,12 +413,16 @@ document.querySelectorAll('[data-difficulty]').forEach(b => {
     $('difficulty-description').textContent = ({ recruit: 'ศัตรูอ่อน · เหมาะฝึกเล่น', survivor: 'ศัตรูระดับปกติ', nightmare: 'ศัตรูเร็ว ถึก และตีแรง' })[game.difficulty];
   };
 });
-function openManual() { pausedForManual = game.state === 'playing'; if (pausedForManual) { game.pause(); renderState(); } $('manual').showModal(); }
-$('manual-button').onclick = openManual;
+function openPausingDialog(dialog) { pausedForDialog = game.state === 'playing'; if (pausedForDialog) { game.pause(); renderState(); } dialog.showModal(); }
+function resumeAfterDialog() { if (pausedForDialog && game.state === 'paused') { game.pause(); renderState(); canvas.focus({ preventScroll: true }); } pausedForDialog = false; }
+$('manual-button').onclick = () => openPausingDialog($('manual'));
 $('close-manual').onclick = $('manual-done').onclick = () => $('manual').close();
-$('manual').addEventListener('close', () => { if (pausedForManual && game.state === 'paused') { game.pause(); renderState(); canvas.focus({ preventScroll: true }); } pausedForManual = false; });
+$('manual').addEventListener('close', resumeAfterDialog);
+bindChangelog($('changelog-button'), $('changelog-list'), { document, getStorage: () => localStorage, open: () => openPausingDialog($('changelog')) });
+$('close-changelog').onclick = $('changelog-done').onclick = () => $('changelog').close();
+$('changelog').addEventListener('close', resumeAfterDialog);
 window.addEventListener('keydown', e => {
-  if ($('manual').open || $('armory').open || $('touch-tutorial').open || $('quit-confirm').open) return;
+  if ($('manual').open || $('changelog').open || $('armory').open || $('touch-tutorial').open || $('quit-confirm').open) return;
   const key = controlKey(e);
   if (key === 'escape' && document.body.classList.contains('game-expanded')) { e.preventDefault(); toggleFullscreen(); return; }
   if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;

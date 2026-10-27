@@ -165,3 +165,22 @@ button,summary{letter-spacing:0}
   @keyframes boss-alert-shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-3px,1px)}40%{transform:translate(3px,-1px)}60%{transform:translate(-2px,-1px)}80%{transform:translate(2px,1px)}}
 }
 @media(max-width:520px) and (orientation:portrait){.wave-banner.boss-alert{top:max(30%,180px)}}
+
+/* Release notes open from the version badge; a dot marks a version this browser has not viewed. */
+button.version{display:inline-flex;align-items:center;gap:6px;min-height:32px;background:none;transition:border-color .15s,color .15s}
+button.version:hover{border-color:var(--accent);color:var(--text)}
+.version.has-update::after{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px #d1e69a99}
+#changelog{width:min(600px,92vw);overscroll-behavior:contain}#changelog h2{font:700 30px/1.4 var(--thai)}
+.release-list{display:grid;gap:10px;margin:20px 0 24px}
+.release{border:1px solid var(--line);background:#161d14}.release[open]{border-color:#4d5b3d}
+.release summary{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 14px;cursor:pointer;list-style:none}
+.release summary::-webkit-details-marker{display:none}
+.release summary::before{content:'▸';color:var(--muted)}.release[open] summary::before{content:'▾'}
+.release summary strong{font:600 15px var(--thai);color:var(--accent);font-variant-numeric:tabular-nums}
+.release time{font:400 var(--ui-small)/1.6 var(--thai);color:#9aa88a}
+.release-latest{margin-left:auto;font:600 var(--ui-small)/1.6 var(--thai);color:#202618;background:var(--accent);padding:0 8px}
+.release ul{list-style:none;margin:0;padding:0 14px 14px;display:grid;gap:8px}
+.release li{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:start;font:400 var(--ui-size)/1.7 var(--thai);color:#c2cbb7}
+.change-type{font:600 var(--ui-small)/1.9 var(--thai);text-align:center;border:1px solid currentColor}
+.change-new{color:var(--accent)}.change-improved{color:#9fd3c7}.change-fixed{color:#edb895}
+@media(max-width:520px){#changelog h2{font-size:24px}.release summary{gap:10px;padding:10px 12px}.release ul{padding:0 12px 12px}.release li{grid-template-columns:38px 1fr}}
