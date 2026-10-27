@@ -229,7 +229,9 @@ not affect melee stats.
 ## Emergency knife
 
 When both the magazine and shared reserve are empty, the survivor automatically
-holds a knife. Use the same fire controls to slash toward your aim: 65 world units,
+holds the equipped melee weapon. The same fire controls use its normal damage,
+windup and recovery, and its appearance stays equipped between attacks.
+When the field knife is equipped, the emergency knife behavior below applies. Use the same fire controls to slash toward your aim: 65 world units,
 a 90° arc, 40 damage per enemy and a 0.45-second cooldown. Walls block hits.
 Gun upgrades do not affect the knife. Picking up ammunition restores the same gun
 and starts its normal reload automatically. An empty magazine with reserve ammo
