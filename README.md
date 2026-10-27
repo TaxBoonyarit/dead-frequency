@@ -211,3 +211,17 @@ release shows its date and changes labelled ใหม่ (new), ปรับ (im
 notes during a mission pauses it and closing them resumes. A dot on the badge
 marks a version this browser has not viewed; the last viewed version is stored in
 `localStorage` and the notes still open when site data is blocked.
+
+## Melee weapons
+
+Every run starts with a free field knife alongside the pistol. Press physical F
+or tap ตี to attack along the current aim. Swings have windup and recovery,
+cancel reloads and block shooting/reloading until recovery finishes. They use
+no ammunition or stamina. Walls block hits; each target is hit once per swing.
+The knife hits only the nearest target. Bosses resist push and never stagger.
+
+The armory has firearm and melee categories with shared ownership/affordability
+filters. Buy and equip melee only between waves: crowbar (200 CR), baseball bat
+(300), fire axe (450), sledgehammer (650), katana (800). One melee weapon is
+equipped alongside the gun; ownership resets on a new run. Firearm upgrades do
+not affect melee stats.

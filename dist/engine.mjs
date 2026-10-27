@@ -15,6 +15,14 @@ export const WEAPONS = [
   { id: 'lmg', name: 'BASTION M60', type: 'ปืนกลหนัก', description: 'แมกใหญ่ 75 นัด ยิงกดฝูงต่อเนื่อง แต่รีโหลดช้า', price: 950, damage: 30, interval: .12, mag: 75, reloadTime: 3.4, pellets: 1, spread: .10, range: 1 },
   { id: 'sniper', name: 'LONGWATCH .50', type: 'สไนเปอร์', description: 'พลังสูงสำหรับบอส ต้องเล็งให้แม่นและรอจังหวะยิง', price: 1200, damage: 240, interval: 1.05, mag: 5, reloadTime: 2.8, pellets: 1, spread: .0015, range: 1.7 },
 ];
+export const MELEE_WEAPONS = [
+  { id: 'knife', name: 'มีดสนาม', price: 0, damage: 30, interval: .30, windup: .08, range: 45, arc: 40, knockback: 2, stagger: .08, description: 'แทงเร็ว เน้นเป้าหมายเดียว', single: true },
+  { id: 'crowbar', name: 'ชะแลง', price: 200, damage: 50, interval: .65, windup: .12, range: 65, arc: 100, knockback: 12, stagger: .22, description: 'สมดุล ผลักศัตรูด้านหน้า' },
+  { id: 'bat', name: 'ไม้เบสบอล', price: 300, damage: 55, interval: .75, windup: .18, range: 80, arc: 140, knockback: 18, stagger: .25, description: 'กวาดกว้าง เปิดทางหนี' },
+  { id: 'axe', name: 'ขวานดับเพลิง', price: 450, damage: 110, interval: 1, windup: .28, range: 70, arc: 70, knockback: 8, stagger: .2, description: 'ฟันหนัก เหมาะจัดการตัวถึก' },
+  { id: 'sledge', name: 'ค้อนปอนด์', price: 650, damage: 150, interval: 1.4, windup: .45, range: 75, arc: 90, knockback: 26, stagger: .55, description: 'ง้างช้า ผลักแรงและชะงักนาน' },
+  { id: 'katana', name: 'ดาบคาตานะ', price: 800, damage: 90, interval: .6, windup: .16, range: 100, arc: 120, knockback: 5, stagger: .12, description: 'ฟันกวาดไกล จัดการหลายเป้าหมาย' },
+];
 export const BOSS_CHARGE = { speed: 360, duration: .65 };
 export const BOSSES = [
   ['THE WARDEN', 'slam'], ['RED HOUND', 'charge'], ['ACID MOTHER', 'acid'],
@@ -139,6 +147,8 @@ export class Game {
     this.characterId = character.id;
     this.player = { x: 640, y: 410, angle: -.65, hp: character.hp, maxHp: character.hp, stamina: 100, speed: character.speed, moving: false, sprinting: false, invulnerable: 0 };
     this.credits = 0; this.weaponId = 'pistol'; this.ownedWeapons = new Map([['pistol', 18]]);
+    this.meleeId = 'knife'; this.ownedMelee = new Set(['knife']);
+    this.melee = { cooldown: 0, swing: null };
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: AMMO.start, cooldown: 0, reload: 0, bloom: 0 };
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
@@ -171,6 +181,40 @@ export class Game {
     this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0, bloom: 0 };
     this.weaponId = id; return true;
   }
+  buyMelee(id) {
+    const w = MELEE_WEAPONS.find(w => w.id === id);
+    if (this.state !== 'upgrade' || !w || this.ownedMelee.has(id) || this.credits < w.price) return false;
+    this.credits -= w.price; this.ownedMelee.add(id); this.equipMelee(id);
+    this.emit('purchase', { weapon: id }); return true;
+  }
+  equipMelee(id) {
+    if (this.state !== 'upgrade' || !this.ownedMelee.has(id) || this.meleeId === id) return false;
+    this.meleeId = id; this.melee = { cooldown: 0, swing: null }; return true;
+  }
+  attackMelee() {
+    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0) return false;
+    const w = MELEE_WEAPONS.find(w => w.id === this.meleeId);
+    this.gun.reload = 0;
+    this.melee.cooldown = w.interval;
+    this.melee.swing = { weapon: w, angle: this.player.angle, remaining: w.windup, hit: false };
+    this.emit('meleeSwing', { weapon: w.id }); return true;
+  }
+  resolveMelee(swing) {
+    const p = this.player, w = swing.weapon;
+    const targets = this.enemies.filter(e => {
+      const distance = Math.hypot(e.x - p.x, e.y - p.y);
+      const angle = Math.atan2(e.y - p.y, e.x - p.x) - swing.angle;
+      const delta = Math.abs(Math.atan2(Math.sin(angle), Math.cos(angle)));
+      return e.hp > 0 && distance <= w.range + e.r && delta <= w.arc * Math.PI / 360
+        && clearLine(p.x, p.y, e.x, e.y, 1, this.obstacles);
+    }).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
+    for (const e of w.single ? targets.slice(0, 1) : targets) {
+      const angle = Math.atan2(e.y - p.y, e.x - p.x);
+      move(e, Math.cos(angle) * w.knockback * (e.type === 'boss' ? .25 : 1), Math.sin(angle) * w.knockback * (e.type === 'boss' ? .25 : 1), e.r, this.obstacles);
+      if (e.type !== 'boss') e.stagger = w.stagger;
+      this.damageEnemy(e, w.damage, e.x, e.y);
+    }
+  }
   start() { this.reset(this.difficulty); this.sceneOrder = shuffleScenes(this.random); this.state = 'playing'; this.nextWave(); }
   nextWave() {
     this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
@@ -183,7 +227,7 @@ export class Game {
   pause() { if (this.state === 'playing') this.state = 'paused'; else if (this.state === 'paused') this.state = 'playing'; }
   reload() {
     const g = this.gun;
-    if (this.state !== 'playing' || g.reload > 0 || g.ammo === g.mag || g.reserve <= 0) return;
+    if (this.state !== 'playing' || this.melee.cooldown > 0 || g.reload > 0 || g.ammo === g.mag || g.reserve <= 0) return;
     g.reload = g.reloadTime; this.emit('reload', { weapon: this.weaponId, duration: g.reloadTime });
   }
   upgrade(id) {
@@ -214,7 +258,7 @@ export class Game {
   }
   shoot() {
     const g = this.gun, p = this.player;
-    if (this.state !== 'playing' || this.clearClock > 0 || g.cooldown > 0 || g.reload > 0) return;
+    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0 || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     const cone = this.accuracySpread();
     for (let i = 0; i < g.pellets; i++) {
@@ -226,6 +270,20 @@ export class Game {
     g.bloom = Math.min(1, g.bloom + .18);
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
     this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
+  }
+  damageEnemy(e, damage, x, y) {
+    if (e.hp <= 0) return;
+    e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
+          if (e.hp <= 0) {
+            const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
+            this.kills++; this.score += reward * 10; this.credits += reward;
+            this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
+            if (this.stains.length > 80) this.stains.shift();
+            const roll = this.random();
+            if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
+            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
+            this.emit('kill');
+          }
   }
   burst(x, y, color, count, force = 70) {
     for (let i = 0; i < count; i++) { const a = this.random() * Math.PI * 2, s = this.random() * force; this.particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: .2 + this.random() * .35, color }); }
@@ -317,12 +375,20 @@ export class Game {
     p.moving = p.x !== oldX || p.y !== oldY; p.sprinting = !!sprint && p.moving;
     const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
     if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
+    this.melee.cooldown = Math.max(0, this.melee.cooldown - dt);
+    const swing = this.melee.swing;
+    if (swing) {
+      swing.remaining -= dt;
+      if (!swing.hit && swing.remaining <= 0) { swing.hit = true; this.resolveMelee(swing); }
+      if (this.melee.cooldown === 0) this.melee.swing = null;
+    }
     if (input.fire) this.shoot();
     this.spawnClock -= dt;
     if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); if (this.remaining === 1 && !this.bossWarned) { this.bossWarned = true; this.spawnClock = 3; this.emit('bossIncoming'); } }
     this.pathClock -= dt;
     if (this.pathClock <= 0) { this.paths.clear(); this.pathClock = .35; }
     for (const e of this.enemies) {
+      if (e.hp <= 0) continue;
       if (e.type === 'boss') this.updateBoss(e, dt);
       e.stagger = Math.max(0, (e.stagger || 0) - dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
@@ -366,17 +432,7 @@ export class Game {
             move(e, b.vx / length * distance, b.vy / length * distance, e.r, this.obstacles);
             if (e.type !== 'boss') e.stagger = .45;
           }
-          e.hp -= b.damage; e.hit = .1; b.life = 0; this.emit('hit'); this.burst(sx, sy, '#a0ab64', 6);
-          if (e.hp <= 0) {
-            const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            this.kills++; this.score += reward * 10; this.credits += reward;
-            this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
-            if (this.stains.length > 80) this.stains.shift();
-            const roll = this.random();
-            if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
-            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
-            this.emit('kill');
-          }
+          b.life = 0; this.damageEnemy(e, b.damage, sx, sy);
         }
       }
       b.x = nx; b.y = ny;
