@@ -248,12 +248,13 @@ export class Game {
     g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
     this.state = 'playing'; this.nextWave();
   }
-  get usingKnife() { return this.gun.ammo <= 0 && this.gun.reserve <= 0; }
+  get usingMelee() { return this.gun.ammo <= 0 && this.gun.reserve <= 0; }
+  get usingKnife() { return this.usingMelee && this.meleeId === 'knife'; }
   addReserve(amount) {
-    const wasKnife = this.usingKnife;
+    const wasEmpty = this.usingMelee;
     const added = Math.max(0, Math.min(amount, AMMO.maxReserve - this.gun.reserve));
     this.gun.reserve += added;
-    if (wasKnife && added > 0) { this.reload(); this.autoReloadPending = this.gun.reload === 0; }
+    if (wasEmpty && added > 0) { this.reload(); this.autoReloadPending = this.gun.reload === 0; }
     return added;
   }
   accuracySpread() {
@@ -265,7 +266,10 @@ export class Game {
   shoot() {
     const g = this.gun, p = this.player;
     if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0) return;
-    if (this.usingKnife) { this.swingKnife(); return; }
+    if (this.usingMelee) {
+      if (this.usingKnife) this.swingKnife(); else this.attackMelee();
+      return;
+    }
     if (this.knifeCooldown > 0 || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     const cone = this.accuracySpread();

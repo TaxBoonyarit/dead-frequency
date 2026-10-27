@@ -44,3 +44,17 @@ test('emergency knife and equipped melee cannot stack attacks and ammo pickup wa
  g.gun.ammo=0;g.gun.reserve=0;g.gun.reload=0;g.shoot();assert.ok(g.slash);assert.equal(g.attackMelee(),false);
  tick(g,.5);assert.equal(g.attackMelee(),true);
 });
+
+test('empty gun uses each equipped melee instead of reverting to emergency knife after recovery', () => {
+ for (const w of MELEE_WEAPONS.slice(1)) {
+  const g=running();g.state='upgrade';g.credits=2000;assert.equal(g.buyMelee(w.id),true);g.state='playing';
+  g.gun.ammo=0;g.gun.reserve=0;const e=enemy(g,40);g.enemies=[e];
+  assert.equal(g.usingMelee,true);assert.equal(g.usingKnife,false);
+  g.attackMelee();tick(g,w.interval+.05);
+  assert.equal(g.meleeId,w.id);assert.equal(g.usingKnife,false);assert.equal(g.melee.swing,null);
+  const hp=e.hp;g.shoot();assert.equal(g.melee.swing.weapon.id,w.id);assert.equal(g.slash,null);
+  tick(g,w.windup+.01);assert.equal(e.hp,hp-w.damage);
+  g.addReserve(12);tick(g,w.interval+.05);assert.equal(g.usingMelee,false);assert.ok(g.gun.reload>0);
+  assert.equal(g.meleeId,w.id);assert.equal(g.weaponId,'pistol');
+ }
+});
