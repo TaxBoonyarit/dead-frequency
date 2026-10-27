@@ -59,3 +59,23 @@ test('phone framing widens the view without stretching and desktop zoom remains 
   assert.equal(viewportSize(390,756,false).height,800);
   assert.equal(viewportSize(1280,800,true).height,800);
 });
+
+test('melee poses align impact with damage and recover smoothly for every weapon', async () => {
+  const { meleePose } = await import('../dist/view.mjs');
+  const { MELEE_WEAPONS } = await import('../dist/engine.mjs');
+  for (const w of MELEE_WEAPONS) {
+    const impact = meleePose(w, w.interval - w.windup);
+    assert.ok(Math.abs(impact.angle) < 1e-8);
+    assert.ok(impact.reach > 1);
+    const rest = meleePose(w, 0);
+    assert.ok(Math.abs(rest.angle) < 1e-8);
+    assert.ok(Math.abs(rest.reach - 1) < 1e-8);
+    for (let t = 0; t <= w.interval; t += .005) {
+      const a = meleePose(w, w.interval - t), b = meleePose(w, w.interval - t - .00001);
+      for (const key of ['angle', 'reach', 'thrust', 'torso']) {
+        assert.ok(Number.isFinite(a[key]));
+        assert.ok(Math.abs(a[key] - b[key]) < .05, `${w.id}: ${key} jumps`);
+      }
+    }
+  }
+});

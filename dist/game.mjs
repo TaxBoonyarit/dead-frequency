@@ -5,7 +5,7 @@ import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
-import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize } from './view.mjs';
+import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize, meleePose, drawMelee } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
@@ -133,7 +133,9 @@ function drawBody(e, isPlayer = false) {
     if (e.hp < e.maxHp) { rect(ctx, e.x - 17, e.y - e.r - 10, 34, 3, '#121b12'); rect(ctx, e.x - 17, e.y - e.r - 10, 34 * e.hp / e.maxHp, 3, '#b9cd80'); }
     return;
   }
-  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle || 0);
+  const swinging = isPlayer ? game.melee.swing : null;
+  const pose = swinging ? meleePose(swinging.weapon, game.melee.cooldown) : null;
+  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(swinging ? swinging.angle + pose.torso : e.angle || 0);
   const s = isPlayer ? 1 : e.type === 'boss' ? 1.8 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
   const step = Math.sin(e.phase || game.time * 12) * 3;
   ctx.shadowColor = '#000a'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
@@ -142,14 +144,9 @@ function drawBody(e, isPlayer = false) {
   if (isPlayer) {
     const character = CHARACTERS.find(c => c.id === game.characterId);
     circle(ctx, 0, 0, 12, character.color); rect(ctx, -9, -9, 9, 18, '#364b35');
-    circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
-    const swinging = game.melee.swing;
+    if (!swinging) { circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59'); }
     if (swinging) {
-      const w = swinging.weapon, progress = 1 - game.melee.cooldown / w.interval;
-      ctx.save(); ctx.rotate(swinging.angle - e.angle + (progress - .5) * w.arc * Math.PI / 180);
-      line(ctx, [[12, 0], [w.range * .7, 0]], '#d6ddbb', w.id === 'sledge' ? 9 : w.id === 'katana' ? 3 : 5);
-      if (['axe', 'sledge'].includes(w.id)) rect(ctx, w.range * .6, -10, 12, 20, '#899382');
-      ctx.strokeStyle = '#d6ddbb66'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, w.range, -.25, .25); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.rotate(-pose.torso); drawMelee(ctx, swinging.weapon, pose); ctx.restore();
     }
     const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
     if (!swinging) rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); if (!swinging) rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
