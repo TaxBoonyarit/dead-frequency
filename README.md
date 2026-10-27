@@ -212,6 +212,20 @@ notes during a mission pauses it and closing them resumes. A dot on the badge
 marks a version this browser has not viewed; the last viewed version is stored in
 `localStorage` and the notes still open when site data is blocked.
 
+## Melee weapons
+
+Every run starts with a free field knife alongside the pistol. Press physical F
+or tap ตี to attack along the current aim. Swings have windup and recovery,
+cancel reloads and block shooting/reloading until recovery finishes. They use
+no ammunition or stamina. Walls block hits; each target is hit once per swing.
+The knife hits only the nearest target. Bosses resist push and never stagger.
+
+The armory has firearm and melee categories with shared ownership/affordability
+filters. Buy and equip melee only between waves: crowbar (200 CR), baseball bat
+(300), fire axe (450), sledgehammer (650), katana (800). One melee weapon is
+equipped alongside the gun; ownership resets on a new run. Firearm upgrades do
+not affect melee stats.
+
 ## Emergency knife
 
 When both the magazine and shared reserve are empty, the survivor automatically
@@ -221,3 +235,6 @@ Gun upgrades do not affect the knife. Picking up ammunition restores the same gu
 and starts its normal reload automatically. An empty magazine with reserve ammo
 still uses normal reloading. The sector drawn around the survivor shows knife reach
 on both desktop and touch controls.
+
+The emergency knife and equipped melee attacks share attack priority: a swing
+blocks the other attack until its recovery ends.

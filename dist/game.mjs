@@ -1,11 +1,11 @@
 import { bindWakeLock } from './wake-lock.mjs';
 import { bindChangelog } from './changelog.mjs';
-import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO, KNIFE } from './engine.mjs';
+import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO, KNIFE, MELEE_WEAPONS } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
-import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize, knifePose } from './view.mjs';
+import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize, meleePose, drawMelee, knifePose } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
@@ -15,7 +15,7 @@ let touchTutorialSeen = false;
 const keys = new Set();
 let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, cameraY = 0;
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
-let soundEnabled = false, audio = null, soundscape = null, pausedForDialog = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all';
+let soundEnabled = false, audio = null, soundscape = null, pausedForDialog = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all', shopCategory = 'guns';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
 $('best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
@@ -133,27 +133,30 @@ function drawBody(e, isPlayer = false) {
     if (e.hp < e.maxHp) { rect(ctx, e.x - 17, e.y - e.r - 10, 34, 3, '#121b12'); rect(ctx, e.x - 17, e.y - e.r - 10, 34 * e.hp / e.maxHp, 3, '#b9cd80'); }
     return;
   }
-  const knife = isPlayer && game.usingKnife;
-  const pose = knifePose(knife ? game.slash?.life : 0);
-  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(knife && game.slash ? game.slash.angle : e.angle || 0);
+  const swinging = isPlayer ? game.melee.swing : null;
+  const knife = isPlayer && game.usingKnife && !swinging;
+  const emergencyPose = knifePose(knife ? game.slash?.life : 0);
+  const pose = swinging ? meleePose(swinging.weapon, game.melee.cooldown) : null;
+  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(swinging ? swinging.angle + pose.torso : knife && game.slash ? game.slash.angle : e.angle || 0);
   const s = isPlayer ? 1 : e.type === 'boss' ? 1.8 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
   const step = Math.sin(e.phase || game.time * 12) * 3;
   ctx.shadowColor = '#000a'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
   circle(ctx, 0, 0, 15, '#080e0b44'); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   rect(ctx, -9 + step, -8, 13, 6, '#202d24'); rect(ctx, -9 - step, 3, 13, 6, '#202d24');
   if (isPlayer) {
-    ctx.translate(pose.lean, 0);
+    ctx.translate(knife ? emergencyPose.lean : 0, 0);
     const character = CHARACTERS.find(c => c.id === game.characterId);
     circle(ctx, 0, 0, 12, character.color); rect(ctx, -9, -9, 9, 18, '#364b35');
-    circle(ctx, 7, -10, 5, '#7b8a59');
-    if (!knife) circle(ctx, 9, 9, 5, '#7b8a59');
-    const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
+    if (!swinging && !knife) { circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59'); }
+    if (swinging) {
+      ctx.save(); ctx.rotate(-pose.torso); drawMelee(ctx, swinging.weapon, pose); ctx.restore();
+    }
     if (knife) {
-      const handX = 14 + pose.reach, handY = 5 * (1 - pose.thrust);
+      const handX = 14 + emergencyPose.reach, handY = 5 * (1 - emergencyPose.thrust);
       ctx.save(); ctx.lineCap = 'round';
-      line(ctx, [[4, 9], [9 + pose.reach * .45, 15 - pose.thrust * 9], [handX, handY]], '#263b2c', 9);
-      line(ctx, [[10 + pose.reach * .45, 14 - pose.thrust * 9], [handX, handY]], character.color, 5);
-      ctx.translate(handX, handY); ctx.rotate(pose.tilt);
+      line(ctx, [[4, 9], [9 + emergencyPose.reach * .45, 15 - emergencyPose.thrust * 9], [handX, handY]], '#263b2c', 9);
+      line(ctx, [[10 + emergencyPose.reach * .45, 14 - emergencyPose.thrust * 9], [handX, handY]], character.color, 5);
+      ctx.translate(handX, handY); ctx.rotate(emergencyPose.tilt);
       rect(ctx, 0, -2, 9, 4, '#514333');
       line(ctx, [[3, -2], [3, 2], [6, 2], [6, -2]], '#9b8c70', 1);
       line(ctx, [[9, -5], [9, 5]], '#899b98', 2);
@@ -162,14 +165,14 @@ function drawBody(e, isPlayer = false) {
       line(ctx, [[12, 0], [21, 0]], '#526f70', 1);
       circle(ctx, 1, 0, 4, '#c2ad88');
       ctx.restore();
-    } else {
-      rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
     }
+    const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
+    if (!swinging && !knife) rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); if (!swinging && !knife) rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
     circle(ctx, 1, 0, 8, '#c2ad88');
     if (game.characterId === 'female') { circle(ctx, -3, 0, 7, '#302920'); circle(ctx, -11, 0, 4, '#302920'); }
     else { circle(ctx, 0, -1, 7, character.color); line(ctx, [[-5, 0], [5, 0]], '#d6d9ae88', 2); }
     line(ctx, [[-3, -6], [4, -4]], '#bac38c88', 2);
-    if (!game.usingKnife && game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
+    if (!swinging && !knife && game.gun.cooldown > game.gun.interval - .055 && game.gun.reload === 0) {
       ctx.fillStyle = '#ffe4a2'; ctx.beginPath(); ctx.moveTo(31, -4); ctx.lineTo(48, -9); ctx.lineTo(42, 0); ctx.lineTo(49, 6); ctx.lineTo(31, 3); ctx.fill();
     }
   }
@@ -269,6 +272,8 @@ function updateHUD() {
   $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
   $('ammo-label').innerHTML = game.usingKnife ? '∞ <small>มีด</small>' : `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
   $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : game.usingKnife ? 'KNIFE / ระยะประชิด' : WEAPONS.find(w => w.id === game.weaponId).name;
+  $('melee-status').hidden = !['playing', 'paused'].includes(game.state);
+  $('melee-status').textContent = `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} · ${game.melee.cooldown > 0 ? game.melee.cooldown.toFixed(1) + 's' : 'F / ตี'}`;
   const boss = game.enemies.find(e => e.type === 'boss');
   $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
   if (boss) { $('boss-name').textContent = `${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
@@ -315,6 +320,12 @@ function renderState() {
 }
 function weaponArt(id) {
   const shapes = {
+    knife: '<path d="M20 58l25-21 9 10-25 22zM48 34L106 8Q105 34 59 48z"/>',
+    crowbar: '<path d="M24 65L83 14q17-16 27 0l-9 7q-4-8-10-2L34 74z"/>',
+    bat: '<path d="M22 65l32-29Q88 0 105 12q14 14-30 42L34 74z"/>',
+    axe: '<path d="M26 70L83 8l8 7-57 62zM70 20Q87 3 109 19l-7 25Q81 43 70 20z"/>',
+    sledge: '<path d="M26 70l48-49 8 8-48 49zM62 12l13-10 37 35-13 14z"/>',
+    katana: '<path d="M16 70l23-22 7 7-23 22zM33 44l8-8 17 18-8 7zM46 39Q80 22 115 3Q100 32 55 49z"/>',
     pistol: '<path d="M28 22h72v16H69l-8 27H43l4-27H28z"/><path d="M96 24h11v8H96z"/>',
     smg: '<path d="M17 27h75v17H70l-3 23H54l2-23H39l-5 18H20l7-25H17zM92 30h25v6H92zM7 20h18v26H7z"/>',
     shotgun: '<path d="M7 35l25-11h51v12H42l-9 18H19l4-13-16 5zM81 24h40v6H81zM81 33h40v5H81zM50 39h37v8H50z"/>',
@@ -324,11 +335,14 @@ function weaponArt(id) {
 }
 function renderShop() {
   const canTrade = game.state === 'upgrade';
+  document.querySelector('[data-shop-filter=all]').textContent = `ทั้งหมด · ${shopCategory === 'melee' ? MELEE_WEAPONS.length : WEAPONS.length}`;
+  document.querySelector('.shop-filters').setAttribute('aria-label', 'กรองรายการอาวุธ');
   $('shop-balance').textContent = `${game.credits} CR`;
-  $('shop-equipped').textContent = `กำลังใช้ ${WEAPONS.find(w => w.id === game.weaponId).name}`;
+  $('shop-equipped').textContent = `กำลังใช้ ${WEAPONS.find(w => w.id === game.weaponId).name} + ${MELEE_WEAPONS.find(w => w.id === game.meleeId).name}`;
   document.querySelectorAll('[data-shop-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shopFilter === shopFilter)));
+  document.querySelectorAll('[data-shop-category]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shopCategory === shopCategory)));
   const visibleWeapons = WEAPONS.filter(w => shopFilter === 'owned' ? game.ownedWeapons.has(w.id) : shopFilter === 'affordable' ? !game.ownedWeapons.has(w.id) && game.credits >= w.price : true);
-  $('shop-description').textContent = canTrade ? 'ซื้อหรือสลับปืน แล้วค่อยอัปเกรด' : 'ดูปืนได้ · ซื้อและสลับหลังจบเวฟ';
+  $('shop-description').textContent = canTrade ? 'ซื้อหรือสลับอาวุธ แล้วค่อยอัปเกรด' : 'ดูอาวุธได้ · ซื้อและสลับหลังจบเวฟ';
   $('armory-done').firstChild.textContent = canTrade ? 'อัปเกรดต่อ ' : game.state === 'menu' ? 'หน้าแรก ' : 'กลับเกม ';
   $('weapon-grid').innerHTML = visibleWeapons.map(w => {
     const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
@@ -336,6 +350,19 @@ function renderShop() {
     const action = equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? `ซื้อหลังจบเวฟ · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
     return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะใกล้' : w.range > 1.2 ? 'ระยะไกล' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="weapon-buy" data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button><div class="weapon-sound-actions"><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}" title="เสียงต้นแบบ ${GUN_RECORDINGS[w.id]}">▶ เสียงยิง</button><button class="sound-preview reload-preview" data-reload-preview="${w.id}" aria-label="ลองเสียงรีโหลด ${w.name}">↻ รีโหลด</button></div></article>`;
   }).join('') || '<p class="shop-empty">เครดิตไม่พอ · ฆ่าซอมบี้เพื่อเก็บเงิน หรือดูปืนทั้งหมด</p>';
+  if (shopCategory === 'melee') {
+    const visible = MELEE_WEAPONS.filter(w => shopFilter === 'owned' ? game.ownedMelee.has(w.id) : shopFilter === 'affordable' ? !game.ownedMelee.has(w.id) && game.credits >= w.price : true);
+    $('weapon-grid').innerHTML = visible.map(w => {
+      const owned = game.ownedMelee.has(w.id), equipped = game.meleeId === w.id;
+      return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>ประชิด</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : w.price + ' CR'}</b></div><div class="melee-art" aria-hidden="true">${weaponArt(w.id)}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${w.damage}</dd></div><div><dt>ระยะ</dt><dd>${w.range}</dd></div><div><dt>ตีซ้ำทุก</dt><dd>${w.interval.toFixed(2)}s</dd></div><div><dt>มุมกวาด</dt><dd>${w.arc}°</dd></div></dl><button data-melee="${w.id}" ${!canTrade || equipped || !owned && game.credits < w.price ? 'disabled' : ''}>${equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? 'ซื้อหลังจบเวฟ' : game.credits < w.price ? 'เครดิตไม่พอ' : 'ซื้อและใช้ · ' + w.price + ' CR'}</button></article>`;
+    }).join('') || '<p class="shop-empty">ไม่มีอาวุธตรงกับตัวกรองนี้</p>';
+    $('weapon-grid').querySelectorAll('[data-melee]').forEach(b => b.onclick = () => {
+      const id = b.dataset.melee, owned = game.ownedMelee.has(id);
+      if (!(owned ? game.equipMelee(id) : game.buyMelee(id))) return;
+      $('shop-feedback').textContent = `${owned ? 'เปลี่ยนเป็น' : 'ซื้อแล้ว'} ${MELEE_WEAPONS.find(w => w.id === id).name}`;
+      renderShop(); updateHUD(); $('armory-done').focus({ preventScroll: true });
+    });
+  }
   $('weapon-grid').querySelectorAll('[data-reload-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.reloadPreview, false, true));
   $('weapon-grid').querySelectorAll('[data-preview]').forEach(button => button.onclick = () => previewSound(button.dataset.preview));
   $('weapon-grid').querySelectorAll('[data-weapon]').forEach(button => button.onclick = () => {
@@ -348,6 +375,7 @@ function renderShop() {
   });
 }
 document.querySelectorAll('[data-shop-filter]').forEach(button => button.onclick = () => { shopFilter = button.dataset.shopFilter; renderShop(); });
+document.querySelectorAll('[data-shop-category]').forEach(b => b.onclick = () => { shopCategory = b.dataset.shopCategory; renderShop(); });
 function openShop() {
   shopFilter = 'all';
   pausedForShop = game.state === 'playing';
@@ -451,8 +479,9 @@ window.addEventListener('keydown', e => {
   const key = controlKey(e);
   if (key === 'escape' && document.body.classList.contains('game-expanded')) { e.preventDefault(); toggleFullscreen(); return; }
   if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;
-  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
+  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','f','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
   if (!e.repeat && (key === 'escape' || key === 'p')) { game.pause(); renderState(); return; }
+  if (key === 'f' && !e.repeat) { const aim = !touchMode && pointerAim(game.player); if (aim) game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); game.attackMelee(); }
   if (key === 'r') game.reload();
   if (key === ' ' && !e.repeat) game.shoot();
   keys.add(key);
@@ -468,6 +497,8 @@ canvas.addEventListener('pointerdown', e => { if (e.button !== 0 || e.pointerTyp
 for (const event of ['pointerup','pointercancel','lostpointercapture']) canvas.addEventListener(event, () => firing = false);
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 touchInput = bindTouchControls({ stick: $('joystick'), knob: $('joystick-knob'), fire: $('touch-fire'), sprint: $('touch-sprint'), canUse: () => touchMode && game.state === 'playing' });
+$('touch-melee').addEventListener('pointerdown', e => { if (!touchMode || game.state !== 'playing' || e.button !== 0) return; e.preventDefault(); game.attackMelee(); });
+$('touch-melee').onclick = e => { if (e.detail === 0 && touchMode) game.attackMelee(); };
 $('touch-reload').onclick = () => game.reload();
 function updateTouchMode() {
   releaseInput(); pointer = null;
@@ -492,6 +523,7 @@ function frame(now) {
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
     if (e.type === 'slash') tone(180, .08, 'triangle', .035, 60);
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
+    if (e.type === 'meleeSwing') tone(230, .12, 'triangle', .035, 65);
     if (e.type === 'hit') tone(80, .04, 'triangle', .025, 35);
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') { soundscape?.reloadEffect(e.weapon, 0, 0, e.duration); if (soundscape) soundscape.reloadStep = 0; }

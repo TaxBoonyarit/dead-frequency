@@ -184,3 +184,5 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
 .change-type{font:600 var(--ui-small)/1.9 var(--thai);text-align:center;border:1px solid currentColor}
 .change-new{color:var(--accent)}.change-improved{color:#9fd3c7}.change-fixed{color:#edb895}
 @media(max-width:520px){#changelog h2{font-size:24px}.release summary{gap:10px;padding:10px 12px}.release ul{padding:0 12px 12px}.release li{grid-template-columns:38px 1fr}}
+
+.shop-categories{display:flex;gap:8px;margin:12px 0}.shop-categories button{padding:10px 20px;min-height:48px}.shop-categories button[aria-pressed=true]{background:#52633b;color:#fff}.melee-art{font-size:52px;text-align:center;padding:15px}.melee-status{position:absolute;left:12px;top:100px;pointer-events:none;color:#d5dfc5;background:#101b16aa;padding:5px 9px;font-size:12px;z-index:3}.touch-actions{display:grid;grid-template-columns:56px 78px;grid-template-rows:56px 78px;align-items:center;justify-items:center}#touch-fire{grid-column:2;grid-row:2}.touch-actions #touch-melee{grid-column:1;grid-row:2}.touch-actions #touch-reload{grid-column:1;grid-row:1}.touch-actions #touch-sprint{grid-column:2;grid-row:1}

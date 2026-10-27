@@ -3,7 +3,7 @@ export function initialTouchMode(media) {
 }
 
 const PHYSICAL_KEYS = {
-  KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', KeyR: 'r', KeyP: 'p',
+  KeyW: 'w', KeyA: 'a', KeyS: 's', KeyD: 'd', KeyF: 'f', KeyR: 'r', KeyP: 'p',
   ArrowUp: 'arrowup', ArrowDown: 'arrowdown', ArrowLeft: 'arrowleft', ArrowRight: 'arrowright',
   ShiftLeft: 'shift', ShiftRight: 'shift', Space: ' ', Escape: 'escape',
 };
