@@ -5,7 +5,7 @@ import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
 import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
-import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize } from './view.mjs';
+import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize, knifePose } from './view.mjs';
 const $ = id => document.getElementById(id);
 const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport');
 const game = new Game();
@@ -133,21 +133,35 @@ function drawBody(e, isPlayer = false) {
     if (e.hp < e.maxHp) { rect(ctx, e.x - 17, e.y - e.r - 10, 34, 3, '#121b12'); rect(ctx, e.x - 17, e.y - e.r - 10, 34 * e.hp / e.maxHp, 3, '#b9cd80'); }
     return;
   }
-  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.angle || 0);
+  const knife = isPlayer && game.usingKnife;
+  const pose = knifePose(knife ? game.slash?.life : 0);
+  ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(knife && game.slash ? game.slash.angle : e.angle || 0);
   const s = isPlayer ? 1 : e.type === 'boss' ? 1.8 : e.type === 'brute' ? 1.45 : 1; ctx.scale(s, s);
   const step = Math.sin(e.phase || game.time * 12) * 3;
   ctx.shadowColor = '#000a'; ctx.shadowBlur = 8; ctx.shadowOffsetY = 5;
   circle(ctx, 0, 0, 15, '#080e0b44'); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   rect(ctx, -9 + step, -8, 13, 6, '#202d24'); rect(ctx, -9 - step, 3, 13, 6, '#202d24');
   if (isPlayer) {
+    ctx.translate(pose.lean, 0);
     const character = CHARACTERS.find(c => c.id === game.characterId);
     circle(ctx, 0, 0, 12, character.color); rect(ctx, -9, -9, 9, 18, '#364b35');
-    circle(ctx, 7, -10, 5, '#7b8a59'); circle(ctx, 9, 9, 5, '#7b8a59');
+    circle(ctx, 7, -10, 5, '#7b8a59');
+    if (!knife) circle(ctx, 9, 9, 5, '#7b8a59');
     const barrel = ({ pistol: 21, smg: 25, shotgun: 30, rifle: 35, revolver: 24, assault: 32, lmg: 37, sniper: 43 })[game.weaponId];
-    if (game.usingKnife) {
-      rect(ctx, 10, -3, 12, 6, '#655746');
-      line(ctx, [[22, -7], [22, 7]], '#b5bfa8', 3);
-      ctx.fillStyle = '#d7e5dc'; ctx.beginPath(); ctx.moveTo(24, -3); ctx.lineTo(43, 0); ctx.lineTo(24, 4); ctx.fill();
+    if (knife) {
+      const handX = 14 + pose.reach, handY = 5 * (1 - pose.thrust);
+      ctx.save(); ctx.lineCap = 'round';
+      line(ctx, [[4, 9], [9 + pose.reach * .45, 15 - pose.thrust * 9], [handX, handY]], '#263b2c', 9);
+      line(ctx, [[10 + pose.reach * .45, 14 - pose.thrust * 9], [handX, handY]], character.color, 5);
+      ctx.translate(handX, handY); ctx.rotate(pose.tilt);
+      rect(ctx, 0, -2, 9, 4, '#514333');
+      line(ctx, [[3, -2], [3, 2], [6, 2], [6, -2]], '#9b8c70', 1);
+      line(ctx, [[9, -5], [9, 5]], '#899b98', 2);
+      ctx.fillStyle = '#8caaa8'; ctx.beginPath(); ctx.moveTo(11, -3); ctx.lineTo(25, 0); ctx.lineTo(17, 4); ctx.lineTo(11, 3); ctx.closePath(); ctx.fill();
+      line(ctx, [[11, -3], [25, 0], [17, 4]], '#e1eee7', 1);
+      line(ctx, [[12, 0], [21, 0]], '#526f70', 1);
+      circle(ctx, 1, 0, 4, '#c2ad88');
+      ctx.restore();
     } else {
       rect(ctx, 10, -4, barrel, game.weaponId === 'shotgun' ? 7 : 5, '#171f1a'); rect(ctx, 11, -4, barrel - 10, 3, '#9a9d75');
     }
@@ -197,11 +211,10 @@ function render(now) {
   const beam = ctx.createRadialGradient(0, 0, 18, 0, 0, 340); beam.addColorStop(0, '#e2e6ac27'); beam.addColorStop(1, '#e2e6ac00');
   ctx.fillStyle = beam; ctx.beginPath(); ctx.moveTo(5, 0); ctx.arc(0, 0, 340, -.38, .38); ctx.closePath(); ctx.fill(); ctx.restore();
   if (p.invulnerable <= 0 || Math.floor(now / 65) % 2 === 0) drawBody({ ...p, phase: (keys.size || Math.hypot(touchInput.x, touchInput.y) > .1) ? game.time * 14 : 0 }, true);
-  if (game.usingKnife || game.slash) {
+  if (game.usingKnife) {
     ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(game.slash?.angle ?? p.angle);
-    ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, KNIFE.range, -KNIFE.arc / 2, KNIFE.arc / 2); ctx.closePath();
-    ctx.fillStyle = game.slash ? '#dcf4dd44' : '#9ce4ce12'; ctx.fill();
-    ctx.strokeStyle = game.slash ? '#e6ffee' : '#9ce4ce88'; ctx.lineWidth = game.slash ? 3 : 1; ctx.stroke(); ctx.restore();
+    ctx.beginPath(); ctx.arc(0, 0, KNIFE.range, -KNIFE.arc / 2, KNIFE.arc / 2);
+    ctx.strokeStyle = '#9ce4ce45'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
   }
   if (game.gun.reload > 0) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();

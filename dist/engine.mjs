@@ -5,7 +5,7 @@ export const CHARACTERS = [
 ];
 export const W = 1280, H = 800;
 export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
-export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .16 };
+export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .32 };
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .024, range: .9 },
   { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .075, range: .75 },
