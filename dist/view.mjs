@@ -1,4 +1,4 @@
-import { W, H } from './engine.mjs';
+import { W, H, KNIFE } from './engine.mjs';
 
 export function cameraOffset(playerX, viewWidth) {
   return viewWidth > W ? (W - viewWidth) / 2 : Math.max(0, Math.min(W - viewWidth, playerX - viewWidth / 2));
@@ -106,4 +106,15 @@ export function drawMelee(c, weapon, pose) {
     c.beginPath(); c.arc(0, 0, length + 12, -.6, -.1); c.stroke();
   }
   c.restore();
+}
+
+export function knifePose(life = 0) {
+  const t = Math.max(0, Math.min(1, 1 - life / KNIFE.swingTime));
+  const ease = n => n * n * (3 - 2 * n);
+  // Brief draw-back, fast thrust, contact hold, then a slower recovery.
+  const reach = t < .16 ? -6 * ease(t / .16)
+    : t < .38 ? -6 + 30 * ease((t - .16) / .22)
+    : t < .5 ? 24 : 24 * (1 - ease((t - .5) / .5));
+  const thrust = Math.max(0, reach / 24);
+  return { reach, thrust, lean: thrust * 2, tilt: .12 * (1 - thrust) };
 }

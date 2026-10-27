@@ -225,3 +225,16 @@ filters. Buy and equip melee only between waves: crowbar (200 CR), baseball bat
 (300), fire axe (450), sledgehammer (650), katana (800). One melee weapon is
 equipped alongside the gun; ownership resets on a new run. Firearm upgrades do
 not affect melee stats.
+
+## Emergency knife
+
+When both the magazine and shared reserve are empty, the survivor automatically
+holds a knife. Use the same fire controls to slash toward your aim: 65 world units,
+a 90° arc, 40 damage per enemy and a 0.45-second cooldown. Walls block hits.
+Gun upgrades do not affect the knife. Picking up ammunition restores the same gun
+and starts its normal reload automatically. An empty magazine with reserve ammo
+still uses normal reloading. The sector drawn around the survivor shows knife reach
+on both desktop and touch controls.
+
+The emergency knife and equipped melee attacks share attack priority: a swing
+blocks the other attack until its recovery ends.

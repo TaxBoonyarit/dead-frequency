@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Game } from '../dist/engine.mjs';
-import { cameraOffset, pointerToWorld } from '../dist/view.mjs';
+import { Game, KNIFE } from '../dist/engine.mjs';
+import { cameraOffset, pointerToWorld, knifePose } from '../dist/view.mjs';
 
 test('a stationary pointer stays under the reticle as the camera follows the player', () => {
   const bounds = { left: 13, top: 200, width: 364, height: 423 };
@@ -78,4 +78,22 @@ test('melee poses align impact with damage and recover smoothly for every weapon
       }
     }
   }
+});
+
+test('knife pose draws back, thrusts to range, holds and recovers continuously', () => {
+  const at = progress => knifePose(KNIFE.swingTime * (1 - progress));
+  assert.ok(Math.abs(at(0).reach) < 1e-9);
+  assert.ok(at(.1).reach < 0);
+  assert.equal(at(.16).reach, -6);
+  assert.equal(at(.38).reach, 24);
+  assert.equal(at(.45).reach, 24);
+  assert.ok(at(.75).reach > 0 && at(.75).reach < 24);
+  assert.equal(at(1).reach, 0);
+  assert.equal(at(.45).lean, 2);
+  assert.equal(at(.45).tilt, 0);
+  assert.equal(14 + at(.45).reach + 25 + at(.45).lean, KNIFE.range);
+  for (const boundary of [.16, .38, .5]) {
+    assert.ok(Math.abs(at(boundary - .00001).reach - at(boundary + .00001).reach) < .001);
+  }
+  assert.deepEqual(knifePose(), at(1));
 });

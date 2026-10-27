@@ -5,6 +5,7 @@ export const CHARACTERS = [
 ];
 export const W = 1280, H = 800;
 export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
+export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .32 };
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .024, range: .9 },
   { id: 'smg', name: 'V9 STINGER', type: 'ปืนกลมือ', description: 'ยิงรัว แมกกาซีนใหญ่ เหมาะกับฝูงซอมบี้ที่เข้ามาใกล้', price: 220, damage: 20, interval: .095, mag: 30, reloadTime: 1.6, pellets: 1, spread: .075, range: .75 },
@@ -151,6 +152,7 @@ export class Game {
     this.melee = { cooldown: 0, swing: null };
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: AMMO.start, cooldown: 0, reload: 0, bloom: 0 };
+    this.knifeCooldown = 0; this.slash = null; this.autoReloadPending = false;
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
@@ -192,7 +194,7 @@ export class Game {
     this.meleeId = id; this.melee = { cooldown: 0, swing: null }; return true;
   }
   attackMelee() {
-    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0) return false;
+    if (this.state !== 'playing' || this.clearClock > 0 || this.knifeCooldown > 0 || this.melee.cooldown > 0) return false;
     const w = MELEE_WEAPONS.find(w => w.id === this.meleeId);
     this.gun.reload = 0;
     this.melee.cooldown = w.interval;
@@ -246,9 +248,13 @@ export class Game {
     g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
     this.state = 'playing'; this.nextWave();
   }
+  get usingKnife() { return this.gun.ammo <= 0 && this.gun.reserve <= 0; }
   addReserve(amount) {
+    const wasKnife = this.usingKnife;
     const added = Math.max(0, Math.min(amount, AMMO.maxReserve - this.gun.reserve));
-    this.gun.reserve += added; return added;
+    this.gun.reserve += added;
+    if (wasKnife && added > 0) { this.reload(); this.autoReloadPending = this.gun.reload === 0; }
+    return added;
   }
   accuracySpread() {
     const p = this.player, g = this.gun;
@@ -258,7 +264,9 @@ export class Game {
   }
   shoot() {
     const g = this.gun, p = this.player;
-    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0 || g.cooldown > 0 || g.reload > 0) return;
+    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0) return;
+    if (this.usingKnife) { this.swingKnife(); return; }
+    if (this.knifeCooldown > 0 || g.cooldown > 0 || g.reload > 0) return;
     if (g.ammo <= 0) { this.reload(); return; }
     const cone = this.accuracySpread();
     for (let i = 0; i < g.pellets; i++) {
@@ -271,7 +279,21 @@ export class Game {
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
     this.burst(p.x + Math.cos(p.angle) * 31, p.y + Math.sin(p.angle) * 31, '#f5d88c', 4, 65);
   }
-  damageEnemy(e, damage, x, y) {
+  swingKnife() {
+    if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0 || this.knifeCooldown > 0) return;
+    const p = this.player;
+    this.knifeCooldown = KNIFE.interval;
+    this.slash = { angle: p.angle, life: KNIFE.swingTime };
+    this.emit('slash');
+    for (const e of this.enemies) {
+      const dx = e.x - p.x, dy = e.y - p.y;
+      const angle = Math.atan2(Math.sin(Math.atan2(dy, dx) - p.angle), Math.cos(Math.atan2(dy, dx) - p.angle));
+      if (e.hp > 0 && Math.hypot(dx, dy) <= KNIFE.range && Math.abs(angle) <= KNIFE.arc / 2 && clearLine(p.x, p.y, e.x, e.y, 0, this.obstacles)) {
+        this.damageEnemy(e, KNIFE.damage);
+      }
+    }
+  }
+  damageEnemy(e, damage, x = e.x, y = e.y) {
     if (e.hp <= 0) return;
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
           if (e.hp <= 0) {
@@ -360,6 +382,8 @@ export class Game {
     if (this.state !== 'playing') return;
     dt = Math.min(dt, .05); this.time += dt; this.banner = Math.max(0, this.banner - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
     const p = this.player, g = this.gun;
+    this.knifeCooldown = Math.max(0, this.knifeCooldown - dt);
+    if (this.slash) { this.slash.life -= dt; if (this.slash.life <= 0) this.slash = null; }
     g.bloom = Math.max(0, g.bloom - dt * 1.2);
     p.invulnerable = Math.max(0, p.invulnerable - dt); g.cooldown = Math.max(0, g.cooldown - dt);
     if (g.reload > 0) {
@@ -381,6 +405,9 @@ export class Game {
       swing.remaining -= dt;
       if (!swing.hit && swing.remaining <= 0) { swing.hit = true; this.resolveMelee(swing); }
       if (this.melee.cooldown === 0) this.melee.swing = null;
+    }
+    if (this.autoReloadPending && this.melee.cooldown === 0) {
+      this.reload(); this.autoReloadPending = false;
     }
     if (input.fire) this.shoot();
     this.spawnClock -= dt;

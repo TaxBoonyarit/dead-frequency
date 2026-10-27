@@ -36,3 +36,11 @@ test('melee kills award rewards once and last boss death clears hazards and fini
 test('bosses resist push and never stagger, ordinary enemies do', () => {
  const g=running();g.meleeId='sledge';const a=enemy(g,60), b=enemy(g,65,15,500,'boss');b.attackClock=100;b.attacks=['slam'];b.stage=1;g.enemies=[a,b];g.attackMelee();tick(g,.46);assert.ok(a.stagger>0);assert.equal(b.stagger,0);assert.ok(a.x-g.player.x>80);assert.ok(b.x-g.player.x<75);
 });
+
+test('emergency knife and equipped melee cannot stack attacks and ammo pickup waits for recovery', () => {
+ const g=running();g.gun.ammo=0;g.gun.reserve=0;
+ g.attackMelee();g.shoot();assert.equal(g.slash,null);
+ g.addReserve(12);assert.equal(g.gun.reload,0);tick(g,.35);assert.ok(g.gun.reload>0);
+ g.gun.ammo=0;g.gun.reserve=0;g.gun.reload=0;g.shoot();assert.ok(g.slash);assert.equal(g.attackMelee(),false);
+ tick(g,.5);assert.equal(g.attackMelee(),true);
+});
