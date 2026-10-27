@@ -115,6 +115,11 @@ refreshes the label without incrementing. `npm run check` rejects a stale label;
 `npm run dev` synchronizes it before starting. Reloading the page does not bump
 the version.
 
+To prepare a release, run `npm run version:patch` first, then add the new
+version's player-facing notes at the top of `dist/changelog.mjs` and run
+`npm test`. Tests fail until the newest notes match `package.json`, so CI does
+not deploy a version without release notes.
+
 Runtime audio names match their purpose: `weapon-m19-sidearm.mp3`,
 `weapon-v9-stinger.mp3`, `weapon-breacher-12.mp3`, `weapon-ranger-r8.mp3`,
 `weapon-judge-44.mp3`, `weapon-vanguard-a4.wav`, `weapon-bastion-m60.mp3`,
@@ -195,3 +200,12 @@ button; requests may fail on insecure connections or under system power policies
 Thai and English interface text share Noto Sans Thai. Buttons, body copy and
 secondary labels use consistent size and weight rules; headings retain a size
 hierarchy. Numeric HUD values use tabular digits for stable alignment.
+
+## Release notes
+
+Tap the version badge in the header to read what changed in each version. Each
+release shows its date and changes labelled ใหม่ (new), ปรับ (improved) or แก้
+(fixed); the newest release is expanded and older ones are collapsed. Opening the
+notes during a mission pauses it and closing them resumes. A dot on the badge
+marks a version this browser has not viewed; the last viewed version is stored in
+`localStorage` and the notes still open when site data is blocked.
