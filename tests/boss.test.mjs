@@ -12,9 +12,13 @@ test('every wave ends with exactly one correctly scaled boss and waits for its d
     assert.equal(b.name, BOSSES[wave - 1].name); assert.equal(b.hp, BOSSES[wave - 1].hp);
     assert.equal(blocked(b.x, b.y, b.r), false); assert.equal(g.remaining, 0);
     g.update(.01); assert.equal(g.state, 'playing'); assert.equal(g.enemies.length, 1);
-    g.player.x = b.x; g.player.y = b.y + 35; g.player.angle = -Math.PI / 2; b.hp = 1;
+    g.player.x = b.x; g.player.y = b.y + 50; g.player.angle = -Math.PI / 2; b.hp = 1;
     g.update(.05, { fire: true });
-    assert.equal(g.kills, 1); assert.equal(g.credits, b.reward);
+    assert.equal(g.kills, 1); assert.equal(g.credits, 0);
+    const amount = Math.round(BOSSES[wave - 1].reward * (wave + 2) / 10);
+    assert.equal(g.drops.find(d => d.type === 'credits').amount, amount);
+    assert.equal(g.events.find(e => e.type === 'bossDown').reward, amount);
+    g.player.x = b.x; g.player.y = b.y; g.update(.01); assert.equal(g.credits, amount);
     assert.equal(g.state, 'playing'); for(let i=0;i<62;i++)g.update(.05);
     assert.equal(g.state, wave === 10 ? 'won' : 'upgrade');
   }

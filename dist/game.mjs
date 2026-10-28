@@ -193,6 +193,13 @@ function render(now) {
   for (const s of game.stains) { circle(ctx, s.x, s.y, s.r, '#3d492b99'); circle(ctx, s.x + 4, s.y, s.r * .6, '#4a492c55'); }
   for (const d of game.drops) {
     if (d.life < 4 && Math.sin(now / 90) < 0) continue;
+    if (d.type === 'credits') {
+      circle(ctx, d.x, d.y, 19 + Math.sin(now / 220) * 2, '#f5c75d20');
+      circle(ctx, d.x, d.y, 10, '#f5c75d'); circle(ctx, d.x, d.y, 7, '#876325');
+      ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff0b0';
+      ctx.fillText('C', d.x, d.y + 4); ctx.fillText(`${d.amount} CR`, d.x, d.y - 23); ctx.restore();
+      continue;
+    }
     const c = d.type === 'health' ? '#b6da8a' : '#dec98c';
     circle(ctx, d.x, d.y, 18 + Math.sin(now / 220) * 2, d.type === 'health' ? '#b6da8a10' : '#dec98c10');
     rect(ctx, d.x - 9, d.y - 8, 18, 16, '#202e1ddd'); ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.strokeRect(d.x - 9, d.y - 8, 18, 16);
@@ -541,7 +548,7 @@ function frame(now) {
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
     if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossEntrance(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave, game.sceneOrder).th}</small>`; tone(180, .6, 'sine', .05, 120); }
-    if (e.type === 'pickup') { toast(e.pickup === 'health' ? `+${e.amount} เลือด / FIELD MEDKIT` : `+${e.amount} กระสุน / SUPPLY FOUND`); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
+    if (e.type === 'pickup') { toast(e.pickup === 'credits' ? `+${e.amount} เครดิต` : e.pickup === 'health' ? `+${e.amount} เลือด / FIELD MEDKIT` : `+${e.amount} กระสุน / SUPPLY FOUND`); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);
     if (e.type === 'won') tone(440, 1, 'sine', .04, 880);
   }

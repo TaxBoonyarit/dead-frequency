@@ -35,11 +35,12 @@ test('last shot switches to knife, reserve ammo keeps normal reload, pickup rest
 });
 test('knife kills award credits and drops once, including boss rewards and wave completion', () => {
   const g = running(); const e = enemy(g, 30, 0, 40); g.shoot(); g.knifeCooldown = 0; g.shoot();
-  assert.equal(e.hp, 0); assert.equal(g.kills, 1); assert.equal(g.credits, 10); assert.equal(g.score, 100); assert.equal(g.drops[0].type, 'ammo');
-  g.update(.01); assert.equal(g.enemies.length, 0); assert.equal(g.player.hp, g.player.maxHp);
+  assert.equal(e.hp, 0); assert.equal(g.kills, 1); assert.equal(g.credits, 0); assert.equal(g.score, 100); assert.equal(g.drops[0].type, 'credits'); assert.equal(g.drops[1].type, 'ammo');
+  g.update(.01); assert.equal(g.credits, 3); assert.equal(g.enemies.length, 0); assert.equal(g.player.hp, g.player.maxHp);
   g.gun.ammo = 0; g.gun.reserve = 0; g.gun.reload = 0;
   const boss = enemy(g, 50, 0, 40, 'boss'); boss.reward = 60; g.remaining = 0; g.knifeCooldown = 0; g.shoot(); g.update(.01);
-  assert.equal(g.kills, 2); assert.equal(g.credits, 70); assert.ok(g.events.some(e=>e.type==='bossDown')); assert.ok(g.clearClock > 0);
+  assert.equal(g.credits, 3); g.player.x = boss.x; g.update(.01);
+  assert.equal(g.kills, 2); assert.equal(g.credits, 21); assert.ok(g.events.some(e=>e.type==='bossDown')); assert.ok(g.clearClock > 0);
 });
 test('pause and wave clear block attacks; pause freezes swing and cooldown; restart clears knife state', () => {
   const g = running(); const e = enemy(g, 40); g.pause(); g.shoot(); assert.equal(e.hp, 100);

@@ -297,12 +297,14 @@ export class Game {
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
           if (e.hp <= 0) {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            this.kills++; this.score += reward * 10; this.credits += reward;
+            const credits = Math.round(reward * (this.wave + 2) / 10);
+            this.kills++; this.score += reward * 10;
+            this.drops.push({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();
             if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
-            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward }); }
+            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward: credits }); }
             this.emit('kill');
           }
   }
@@ -471,10 +473,11 @@ export class Game {
     this.enemies = this.enemies.filter(e => e.hp > 0); this.bullets = this.bullets.filter(b => b.life > 0);
     for (const d of this.drops) {
       d.life -= dt;
-      if (Math.hypot(d.x - p.x, d.y - p.y) < 34) {
-        const amount = d.type === 'health' ? Math.min(30, p.maxHp - p.hp) : this.addReserve(AMMO.pickup);
+      if (d.life > 0 && Math.hypot(d.x - p.x, d.y - p.y) < 34) {
+        const amount = d.type === 'credits' ? d.amount : d.type === 'health' ? Math.min(30, p.maxHp - p.hp) : this.addReserve(AMMO.pickup);
         if (amount === 0) continue;
         if (d.type === 'health') p.hp += amount;
+        if (d.type === 'credits') this.credits += amount;
         d.life = 0; this.emit('pickup', { pickup: d.type, amount });
       }
     }
