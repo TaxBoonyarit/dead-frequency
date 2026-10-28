@@ -227,3 +227,39 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
   .touch-mode.game-active .viewport{height:calc(100dvh - 48px);min-height:0}
   .touch-mode .boss-hud{top:88px;width:min(300px,44%)}
 }
+
+/* Mission setup uses one fluid column instead of nested narrow columns. */
+#menu-overlay{background:linear-gradient(180deg,#10190ff2,#10190fd9)}
+.menu-content{max-width:760px;margin-inline:auto;padding:32px clamp(16px,4vw,32px)}
+.menu-content .character-picker,.menu-content .difficulty-section{width:100%;max-width:none;margin:24px 0;text-align:left}
+.menu-content .character-options{gap:12px}
+.menu-content .character-options button{min-width:0;min-height:116px;border-radius:8px;padding:16px 14px 16px 44px}
+.menu-content .character-options button[aria-pressed=true]{padding:15px 13px 15px 43px}
+.menu-content .character-options small{font-size:11px}
+.menu-content .difficulty-options{gap:8px}
+.menu-content .difficulty-options button{min-height:48px;border-radius:6px;font-size:14px}
+.menu-content>.primary{display:flex;width:100%;min-height:52px;border-radius:6px}
+.menu-content .touch-hint,.menu-content .start-controls{text-align:left;margin:20px 0 12px}
+.menu-content .menu-note{line-height:1.8}
+@media(max-width:900px){
+  body:not(.game-active) .shell{padding-inline:12px}
+  body:not(.game-active) .operations{display:block}
+  body:not(.game-active) .intro,body:not(.game-active) .sidebar,body:not(.game-active) .control-strip{display:none}
+  body:not(.game-active) .topbar{height:60px;gap:12px}
+  body:not(.game-active) .top-status{display:none}
+  body:not(.game-active) .top-actions{gap:12px}
+  body:not(.game-active) .game-panel{margin-top:12px}
+  .menu-content{padding:24px 16px 28px}
+  .menu-content h2{font-size:clamp(28px,6vw,42px);margin:0 0 12px}
+  .menu-content .menu-tag{display:none}
+  .menu-content .character-picker,.menu-content .difficulty-section{margin:20px 0}
+  .menu-content .character-hint{display:block;margin:8px 0 0}
+  .menu-content .character-options button{padding:14px 10px;gap:6px;min-height:112px}
+  .menu-content .character-options button[aria-pressed=true]{padding:13px 9px}
+  .menu-content .character-symbol{display:none}
+  .menu-content .character-options strong{font-size:16px}
+  .menu-content .character-options button{font-size:12px}
+  .menu-content .character-options small{display:inline;margin-left:4px;font-size:10px}
+  .menu-content .menu-note{font-size:11px}
+  #menu-overlay .feed-corner,#menu-overlay .feed-time{display:none}
+}
