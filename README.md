@@ -28,7 +28,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง
 - Esc / P: พักเกม
-- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กด FIRE ค้างแล้วลากเพื่อเล็งและยิงเอง กด R เพื่อรีโหลด
+- มือถือ: ลากวงกลมซ้ายเพื่อเดิน ใช้จอยซ้ายหันทิศและกดปุ่มยิงค้าง กด R เพื่อรีโหลด
 
 จบแต่ละระลอกจะได้เลือกอัปเกรด 1 อย่าง กระสุนสำรอง 36 นัด และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
 
@@ -146,22 +146,17 @@ and restore accuracy.
 ## Touchscreen controls
 
 Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “สัมผัส” toolbar button toggles them on any
-device. Drag the left stick to move; hold and drag FIRE to aim and shoot in that direction,
-hold RUN to sprint, and tap R to reload. Each held action tracks its own finger,
-so walking and firing work together. Releasing or cancelling that finger stops
-only its action; pausing, switching modes or leaving the app resets all controls.
-Buttons have at least 48px targets and the layout supports portrait and landscape.
+device. Use the left stick to move and face the shooting direction. Hold กดยิง
+to fire immediately in that direction; releasing the stick retains the last
+facing direction so you can stop and shoot. Before moving, shots use the current
+facing direction. Dragging the fire button does not aim. There is no automatic
+aiming or target locking. Hold วิ่ง to sprint and tap รีโหลด to reload.
+Each action tracks its own finger; releasing or cancelling it stops only that
+action. Pausing, switching modes and leaving the app clear held controls.
 
-Touch FIRE uses the initial finger position as its aiming center, so the thumb
-can slide outside the button while pointer capture keeps control. A 24px start zone ignores small finger movements before firing begins. Returning within 16px of the initial touch stops firing and clears the direction. No automatic target locking is used. A direction arrow and spread cone
-show the shot direction. Lifting the firing finger, cancelling touch, pausing
-or switching control mode clears the manual aim and stops firing.
-
-The mobile reticle uses a cyan segmented sight, center dot and subtle dashed
-line instead of the large arrow. Its spread ring reflects current accuracy,
-changes to amber while reloading, stays within the visible screen and remains
-faintly visible between shots. FIRE has a matching movable sight thumb and a
-Thai “ลากยิง” label. This is a visual aiming aid; it does not lock onto enemies.
+The cyan mobile reticle and spread ring show the current manual shot direction
+and accuracy. The ring turns amber during reloads. Touch targets are at least
+48px, with layouts for portrait and landscape screens.
 
 On phones the active arena spans the full screen width, with a compact header
 and no sidebar/footer below the match. Portrait framing fills the available screen and shows at least 620 world units horizontally. The scene scales uniformly and centers vertically, so controls have space without stretching sprites. Joystick,
@@ -172,7 +167,7 @@ retain contrast. Desktop layout and landscape controls keep their existing layou
 
 Character and difficulty choices now appear together before the start button.
 The setup menu uses normal page scrolling and keeps the start controls visible
-on a 390×844 screen. Touch mode shows a drag-to-aim illustration before the first
+on a 390×844 screen. Touch mode shows a movement-and-fire illustration before the first
 mission in each page session; enemies start only after the player confirms they
 are ready. Cancelling the lesson preserves the selected character and difficulty.
 Wave breaks focus their named status region for keyboard access and explicitly
@@ -240,3 +235,10 @@ on both desktop and touch controls.
 
 The emergency knife and equipped melee attacks share attack priority: a swing
 blocks the other attack until its recovery ends.
+
+## Mobile interface 1.0.14
+
+Touch controls separate pause from the combat cluster and respect display safe
+areas. Sprint and reload use Thai labels. Wave-break cards keep their action
+labels visible on phones, and the armory return action spans the dialog width.
+Short landscape screens give the arena the space below the toolbar.
