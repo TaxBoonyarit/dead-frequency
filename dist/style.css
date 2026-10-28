@@ -301,3 +301,10 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
 
 .weapon-card{padding:14px}.weapon-card>p{min-height:0;margin-bottom:10px}
 .weapon-card>svg{height:48px;margin:4px auto}.weapon-card dl{margin-bottom:12px}
+
+.airdrop-open{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);z-index:5;min-height:48px;padding:10px 18px;background:#283321ed;color:#f4dc91;border:1px solid #dbc77c;font:600 14px var(--thai);white-space:nowrap}
+.airdrop-open[hidden]{display:none}.airdrop-open kbd{margin-left:8px}.touch-mode .airdrop-open{bottom:calc(196px + env(safe-area-inset-bottom))}.touch-mode .airdrop-open kbd{display:none}
+.boss-hud.special-boss{color:#9ffaff}.boss-hud.special-boss>div{border-color:#65bfc8}.boss-hud.special-boss i{background:#65bfc8}
+@media(max-height:520px) and (orientation:landscape){.touch-mode .airdrop-open{bottom:24px}}
+.wave-banner.special-alert{font-size:clamp(18px,3vw,28px);color:#9ffaff;top:42%;line-height:1.4}
+@media(max-height:520px) and (orientation:landscape){.touch-mode .boss-hud{top:112px}}

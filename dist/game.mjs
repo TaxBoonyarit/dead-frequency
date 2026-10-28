@@ -191,6 +191,24 @@ function render(now) {
   ctx.save(); ctx.translate(-cameraX, -cameraY); ctx.drawImage(ground, 0, 0);
   if (viewHeight > H) { ctx.strokeStyle = '#a4ba9a25'; ctx.lineWidth = 2; ctx.strokeRect(0, 0, W, H); }
   for (const s of game.stains) { circle(ctx, s.x, s.y, s.r, '#3d492b99'); circle(ctx, s.x + 4, s.y, s.r * .6, '#4a492c55'); }
+  const crate = game.airdrop;
+  if (crate) {
+    const warning = crate.state === 'warning', falling = crate.state === 'falling';
+    const color = warning ? '#f29373' : '#e8ce7c';
+    ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6, 5]);
+    ctx.beginPath(); ctx.arc(crate.x, crate.y, warning ? 65 + Math.sin(now / 90) * 5 : 35, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    const lift = falling ? crate.delay * 45 : 0, x = crate.x, y = crate.y - lift;
+    if (falling) {
+      ctx.beginPath(); ctx.arc(x, y - 38, 35, Math.PI, 0); ctx.stroke();
+      line(ctx, [[x - 35, y - 38], [x - 12, y], [x + 12, y], [x + 35, y - 38]], color);
+    }
+    rect(ctx, x - 15, y - 13, 30, 26, '#373b29'); ctx.strokeRect(x - 15, y - 13, 30, 26);
+    rect(ctx, x - 3, y - 13, 6, 26, color);
+    ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = color;
+    const label = warning ? `อันตราย · ${Math.ceil(game.ambush?.delay || 0)}` : falling ? `AIRDROP · ${Math.ceil(crate.delay)}` : `กล่องปริศนา · ${Math.ceil(crate.life)}s`;
+    ctx.fillText(label, x, y - (falling ? 80 : 27)); ctx.restore();
+  }
+  if (game.buffs.shield > 0) { ctx.strokeStyle = '#9ffaff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 24, 0, Math.PI * 2); ctx.stroke(); }
   for (const d of game.drops) {
     if (d.life < 4 && Math.sin(now / 90) < 0) continue;
     if (d.type === 'credits') {
@@ -239,6 +257,16 @@ function render(now) {
   for (const a of game.particles) { ctx.globalAlpha = Math.min(1, a.life * 4); circle(ctx, a.x, a.y, 2, a.color); } ctx.globalAlpha = 1;
   sceneWeather(ctx, activeScene, now, W, H);
   ctx.restore();
+  if (crate) {
+    const x = crate.x - cameraX, y = crate.y - cameraY;
+    if (x < 25 || x > viewWidth - 25 || y < 25 || y > viewHeight - 25) {
+      const edgeX = Math.max(55, Math.min(viewWidth - 55, x));
+      const edgeY = Math.max(150, Math.min(viewHeight - 120, y));
+      ctx.save(); ctx.translate(edgeX, edgeY); ctx.rotate(Math.atan2(y - edgeY, x - edgeX));
+      ctx.fillStyle = '#f2d583'; ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(-5, -7); ctx.lineTo(-5, 7); ctx.fill(); ctx.restore();
+      ctx.save(); ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#f2d583'; ctx.fillText('AIRDROP', edgeX, edgeY + 23); ctx.restore();
+    }
+  }
   const vignette = ctx.createRadialGradient(viewWidth / 2, viewHeight * .48, viewHeight * .2, viewWidth / 2, viewHeight * .5, Math.max(viewWidth, viewHeight) * .7);
   vignette.addColorStop(0, '#00000000'); vignette.addColorStop(1, '#071009b3'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, viewWidth, viewHeight);
   if (game.hitFlash > 0) { ctx.fillStyle = `rgba(145,43,25,${game.hitFlash * 1.3})`; ctx.fillRect(0, 0, viewWidth, viewHeight); }
@@ -288,10 +316,12 @@ function updateHUD() {
   if ($('ammo-label').innerHTML !== ammo) $('ammo-label').innerHTML = ammo;
   $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : game.usingMelee ? `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} / ระยะประชิด` : WEAPONS.find(w => w.id === game.weaponId).name;
   $('melee-status').hidden = !['playing', 'paused'].includes(game.state);
-  $('melee-status').textContent = `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} · ${game.melee.cooldown > 0 ? game.melee.cooldown.toFixed(1) + 's' : 'F / ตี'}`;
-  const boss = game.enemies.find(e => e.type === 'boss');
+  $('melee-status').textContent = `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} · ${game.melee.cooldown > 0 ? game.melee.cooldown.toFixed(1) + 's' : 'F / ตี'}${game.buffs.speed > 0 ? ' · เร็ว ' + Math.ceil(game.buffs.speed) + 's' : ''}${game.buffs.shield > 0 ? ' · โล่ ' + Math.ceil(game.buffs.shield) + 's' : ''}`;
+  $('airdrop-open').hidden = !game.canOpenAirdrop;
+  const bosses = game.enemies.filter(e => e.type === 'boss'), boss = bosses.find(e => e.special) || bosses[0];
   $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
-  if (boss) { $('boss-name').textContent = `${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
+  $('boss-hud').classList.toggle('special-boss', !!boss?.special);
+  if (boss) { $('boss-name').textContent = `${boss.special ? 'บอสพิเศษ · ' : ''}${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${bosses.length > 1 ? ' · บอสทั้งหมด ' + bosses.length : ''}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
   $('credits').textContent = `${game.credits} CR`;
   const shopLink = $('wave-shop-button');
   if (shopLink) shopLink.textContent = `ร้านปืน · ${game.credits} CR ↗`;
@@ -494,10 +524,11 @@ window.addEventListener('keydown', e => {
   const key = controlKey(e);
   if (key === 'escape' && document.body.classList.contains('game-expanded')) { e.preventDefault(); toggleFullscreen(); return; }
   if (e.target.closest?.('button, summary, input, select, textarea, a') && [' ', 'enter'].includes(key)) return;
-  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','f','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
+  if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','shift','r','f','e','escape','p'].includes(key) && game.state !== 'menu') e.preventDefault();
   if (!e.repeat && (key === 'escape' || key === 'p')) { game.pause(); renderState(); return; }
   if (key === 'f' && !e.repeat) { const aim = !touchMode && pointerAim(game.player); if (aim) game.player.angle = Math.atan2(aim.y - game.player.y, aim.x - game.player.x); game.attackMelee(); }
   if (key === 'r') game.reload();
+  if (key === 'e' && !e.repeat) game.openAirdrop();
   if (key === ' ' && !e.repeat) game.shoot();
   keys.add(key);
 });
@@ -515,6 +546,7 @@ touchInput = bindTouchControls({ stick: $('joystick'), knob: $('joystick-knob'),
 $('touch-melee').addEventListener('pointerdown', e => { if (!touchMode || game.state !== 'playing' || e.button !== 0) return; e.preventDefault(); game.attackMelee(); });
 $('touch-melee').onclick = e => { if (e.detail === 0 && touchMode) game.attackMelee(); };
 $('touch-reload').onclick = () => game.reload();
+$('airdrop-open').onclick = () => { game.openAirdrop(); canvas.focus({ preventScroll: true }); };
 function updateTouchMode() {
   releaseInput(); pointer = null;
   document.body.classList.toggle('touch-mode', touchMode);
@@ -536,6 +568,7 @@ function frame(now) {
   game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
   for (const e of game.events.splice(0)) {
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
+    if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('special-alert', e.type === 'boss' && !!e.special);
     if (e.type === 'slash') tone(180, .08, 'triangle', .035, 60);
     if (e.type === 'shot') soundscape?.gunshot(e.weapon);
     if (e.type === 'meleeSwing') tone(230, .12, 'triangle', .035, 65);
@@ -543,10 +576,14 @@ function frame(now) {
     if (e.type === 'hurt') tone(90, .18, 'sawtooth', .06, 32);
     if (e.type === 'reload') { soundscape?.reloadEffect(e.weapon, 0, 0, e.duration); if (soundscape) soundscape.reloadStep = 0; }
     if (e.type === 'loaded') tone(620, .04, 'triangle', .015, 310);
-    if (e.type === 'waveCleared') { $('wave-banner').innerHTML = 'AREA SECURED<small>ปลอดภัย · เก็บเสบียงได้</small>'; }
+    if (e.type === 'waveCleared') { $('wave-banner').innerHTML = `AREA SECURED<small>ปลอดภัย · เก็บเสบียงได้ ${game.clearDelay} วินาที</small>`; }
+    if (e.type === 'airdropIncoming') { toast('Airdrop กำลังลง · กล่องอาจมีซอมบี้'); tone(480, .3, 'triangle', .04, 720); }
+    if (e.type === 'airdropLanded') toast('กล่องลงแล้ว · เข้าใกล้แล้วกด E / เปิดกล่อง');
+    if (e.type === 'airdropOpened') { toast(e.label + (['zombies', 'horde', 'specialBoss'].includes(e.kind) ? ' · หนีจากจุดเตือน!' : '')); tone(320, .2, 'triangle', .035, 640); }
+    if (e.type === 'supplyReward') toast(e.label);
     if (e.type === 'bossIncoming') { game.banner = 3; $('wave-banner').innerHTML = 'BOSS INCOMING<small>บอสกำลังมา · เตรียมอาวุธ</small>'; }
     if (e.type === 'bossPhase') { toast(`${e.name} · PHASE ${e.stage} · ระวังท่าโจมตีต่อเนื่อง`); soundscape?.bossWarning(); }
-    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `BOSS / ${e.name}`; soundscape?.bossEntrance(); }
+    if (e.type === 'boss') { game.banner = 3; $('wave-banner').textContent = `${e.special ? 'บอสพิเศษ' : 'BOSS'} / ${e.name}`; soundscape?.bossEntrance(); }
     if (e.type === 'wave') { $('wave-banner').innerHTML = `WAVE ${String(e.wave).padStart(2, '0')}<small>${sceneForWave(e.wave, game.sceneOrder).th}</small>`; tone(180, .6, 'sine', .05, 120); }
     if (e.type === 'pickup') { toast(e.pickup === 'credits' ? `+${e.amount} เครดิต` : e.pickup === 'health' ? `+${e.amount} เลือด / FIELD MEDKIT` : `+${e.amount} กระสุน / SUPPLY FOUND`); if(e.pickup === 'ammo') soundscape?.reloadEffect(game.weaponId, 1); else tone(550, .15, 'sine', .04, 900); }
     if (e.type === 'dead') tone(130, .8, 'triangle', .05, 30);

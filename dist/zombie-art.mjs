@@ -90,7 +90,8 @@ function skull(c,x,y,size,color,glow) {
   c.restore();
 }
 function drawBoss(c,e,time) {
-  const id=Math.max(0,Math.min(9,e.bossLook ?? 0)), [, ,skin,eye]=BOSS_PORTRAITS[id];
+  const id=Math.max(0,Math.min(9,e.bossLook ?? 0)), [, ,baseSkin,baseEye]=BOSS_PORTRAITS[id];
+  const skin=e.special?'#72b7bd':baseSkin, eye=e.special?'#9ffaff':baseEye;
   const stage=e.stage||1, phase=e.phase ?? time*4, sway=Math.sin(phase)*2;
   const flesh=e.hit>0?'#f2e0c8':skin, wound='#763033', dark='#201c20', bone='#c5baa0';
   c.save();c.translate(e.x,e.y);c.rotate(e.angle||0);c.scale(1.65,1.65);c.lineJoin='round';c.lineCap='round';

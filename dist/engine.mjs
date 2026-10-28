@@ -5,6 +5,17 @@ export const CHARACTERS = [
 ];
 export const W = 1280, H = 800;
 export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
+export const AIRDROP_LOOT = [
+  ['zombies', 'ซอมบี้', 400], ['horde', 'ฝูงซอมบี้', 200], ['specialBoss', 'บอสพิเศษ', 80],
+  ['ammo', 'กระสุน +24', 120], ['health', 'ชุดรักษา +40', 80], ['credits', 'ถุงเงิน', 50],
+  ['stim', 'ยากระตุ้น 8 วินาที', 30], ['melee', 'อาวุธประชิด', 15], ['gun', 'ปืนสุ่ม', 10],
+  ['shield', 'โล่ฉุกเฉิน 3 วินาที', 6], ['blast', 'ระเบิดกวาดพื้นที่', 5],
+  ['upgrade', 'อัปเกรดถาวร', 3], ['jackpot', 'แจ็กพอต', 1],
+].map(([id, label, weight]) => ({ id, label, weight }));
+export function rollAirdrop(random = Math.random) {
+  let roll = Math.floor(random() * 1000);
+  return AIRDROP_LOOT.find(item => (roll -= item.weight) < 0);
+}
 export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .32 };
 export const WEAPONS = [
   { id: 'pistol', name: 'M19 SIDEARM', type: 'ปืนพก', description: 'สมดุลและประหยัดกระสุน อาวุธเริ่มต้นของผู้รอดชีวิต', price: 0, damage: 34, interval: .19, mag: 18, reloadTime: 2.22, pellets: 1, spread: .024, range: .9 },
@@ -152,6 +163,8 @@ export class Game {
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
     this.choices = []; this.clearClock = null;
+    this.airdrop = null; this.airdropClock = null; this.ambush = null; this.clearDelay = 3;
+    this.buffs = { speed: 0, shield: 0 };
   }
   selectCharacter(id) {
     if (this.state !== 'menu' || !CHARACTERS.some(c => c.id === id)) return false;
@@ -172,11 +185,15 @@ export class Game {
     this.equipWeapon(id); this.emit('purchase', { weapon: id }); return true;
   }
   equipWeapon(id) {
-    if (this.state !== 'upgrade' || !this.ownedWeapons.has(id) || id === this.weaponId) return false;
+    if (this.state !== 'upgrade') return false;
+    return this.switchWeapon(id);
+  }
+  switchWeapon(id) {
+    if (!this.ownedWeapons.has(id) || id === this.weaponId) return false;
     this.ownedWeapons.set(this.weaponId, this.gun.ammo);
     const stats = this.weaponStats(id);
     this.gun = { ...stats, ammo: Math.min(stats.mag, this.ownedWeapons.get(id)), reserve: this.gun.reserve, cooldown: 0, reload: 0, bloom: 0 };
-    this.weaponId = id; return true;
+    this.weaponId = id; this.autoReloadPending = false; return true;
   }
   buyMelee(id) {
     const w = MELEE_WEAPONS.find(w => w.id === id);
@@ -219,6 +236,8 @@ export class Game {
     this.paths.clear(); this.pathClock = 0; this.drops = []; this.stains = [];
     this.clearClock = null; this.bullets = [];
     this.spawnClock = .3; this.banner = 3; this.bossWarned = false;
+    this.airdrop = null; this.ambush = null; this.clearDelay = 3;
+    this.airdropClock = this.wave >= 2 && this.random() < .4 ? 8 + this.random() * 7 : null;
     this.emit('wave', { wave: this.wave });
   }
   pause() { if (this.state === 'playing') this.state = 'paused'; else if (this.state === 'paused') this.state = 'playing'; }
@@ -230,18 +249,129 @@ export class Game {
   upgrade(id) {
     if (this.state !== 'upgrade' || !this.choices.some(c => c.id === id)) return;
     const g = this.gun, p = this.player;
+    this.applyUpgrade(id);
+    p.hp = Math.min(p.maxHp, p.hp + (id === 'health' ? p.maxHp : 20));
+    this.addReserve(AMMO.wave);
+    const refill = Math.min(g.mag - g.ammo, g.reserve);
+    g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
+    this.state = 'playing'; this.nextWave();
+  }
+  applyUpgrade(id) {
+    const p = this.player;
     if (id === 'damage') this.weaponBonuses.damage *= 1.35;
     if (id === 'speed') p.speed *= 1.15;
     if (id === 'mag') this.weaponBonuses.mag += 6;
     if (id === 'rate') this.weaponBonuses.rate *= .8;
     if (id === 'health') p.maxHp += 25;
     if (id === 'reload') this.weaponBonuses.reload *= .75;
-    Object.assign(g, this.weaponStats(this.weaponId));
-    p.hp = Math.min(p.maxHp, p.hp + (id === 'health' ? p.maxHp : 20));
-    this.addReserve(AMMO.wave);
-    const refill = Math.min(g.mag - g.ammo, g.reserve);
-    g.ammo += refill; g.reserve -= refill; g.reload = 0; g.bloom = 0;
-    this.state = 'playing'; this.nextWave();
+    Object.assign(this.gun, this.weaponStats(this.weaponId));
+  }
+  supplyPoint(radius = 20, origin = this.player, spread = 350) {
+    for (let i = 0; i < 384; i++) {
+      const x = i < 64 ? origin.x + (this.random() - .5) * spread * 2 : 48 + ((i - 64) % 20) * 62;
+      const y = i < 64 ? origin.y + (this.random() - .5) * spread * 2 : 48 + Math.floor((i - 64) / 20) * 46;
+      if (blocked(x, y, radius, this.obstacles) || Math.hypot(x - this.player.x, y - this.player.y) < 110) continue;
+      if (this.enemies.some(e => e.hp > 0 && Math.hypot(x - e.x, y - e.y) < radius + e.r + 8)) continue;
+      const point = { x, y }, target = approachPoint(point, this.player, radius, this.obstacles);
+      if (clearLine(x, y, target.x, target.y, radius, this.obstacles)) return point;
+    }
+    return null;
+  }
+  get canOpenAirdrop() {
+    const d = this.airdrop, p = this.player;
+    return this.state === 'playing' && d?.state === 'landed' && this.melee.cooldown === 0 && this.knifeCooldown === 0
+      && Math.hypot(d.x - p.x, d.y - p.y) < 65 && clearLine(p.x, p.y, d.x, d.y, 1, this.obstacles);
+  }
+  openAirdrop() {
+    if (!this.canOpenAirdrop) return false;
+    const d = this.airdrop, loot = rollAirdrop(this.random);
+    d.state = 'opened';
+    this.emit('airdropOpened', { kind: loot.id, label: loot.label });
+    if (['zombies', 'horde', 'specialBoss'].includes(loot.id)) {
+      this.ambush = { ...d, kind: loot.id, delay: 3, count: loot.id === 'specialBoss' ? 1 : (loot.id === 'horde' ? 5 : 2) + Math.floor(this.random() * 3) };
+      d.state = 'warning'; this.clearClock = null;
+    } else {
+      this.airdrop = null;
+      this.grantSupply(loot.id, d);
+    }
+    return true;
+  }
+  grantSupply(kind, point) {
+    const p = this.player, fallback = 5 + this.wave;
+    if (kind === 'ammo' || kind === 'health') {
+      const amount = kind === 'ammo' ? this.addReserve(24) : Math.min(40, p.maxHp - p.hp);
+      if (kind === 'health') p.hp += amount;
+      if (amount === 0) this.credits += fallback;
+      this.emit('supplyReward', { label: amount === 0 ? `เสบียงเต็ม · +${fallback} CR` : `+${amount} ${kind === 'ammo' ? 'กระสุน' : 'เลือด'}` });
+    }
+    if (kind === 'credits') {
+      const amount = 10 + this.wave * 3 + Math.floor(this.random() * (10 + this.wave * 3)); this.credits += amount;
+      this.emit('supplyReward', { label: `+${amount} CR` });
+    }
+    if (kind === 'stim') { p.stamina = 100; this.buffs.speed += 8; }
+    if (kind === 'shield') this.buffs.shield += 3;
+    if (kind === 'blast') {
+      this.burst(point.x, point.y, '#f4c876', 32, 200);
+      for (const e of this.enemies) if (Math.hypot(e.x - point.x, e.y - point.y) <= 200) this.damageEnemy(e, 100 + this.wave * 20);
+    }
+    if (kind === 'upgrade') {
+      const upgrade = UPGRADES[Math.floor(this.random() * UPGRADES.length)]; this.applyUpgrade(upgrade.id);
+      if (upgrade.id === 'health') p.hp = p.maxHp;
+      this.emit('supplyReward', { label: upgrade.th });
+    }
+    if (['gun', 'melee', 'jackpot'].includes(kind)) {
+      const melee = kind === 'melee', catalog = melee ? MELEE_WEAPONS : WEAPONS;
+      const unlock = melee ? [0, 2, 3, 4, 6, 7] : [0, 2, 3, 4, 3, 5, 7, 8];
+      const pool = catalog.filter((w, i) => w.price > 0 && this.wave >= unlock[i]);
+      const total = pool.reduce((sum, w) => sum + 1 / w.price, 0);
+      let roll = this.random() * total;
+      const weapon = pool.find(w => (roll -= 1 / w.price) < 0) || pool.at(-1);
+      if (!weapon) this.credits += fallback;
+      else {
+        const owned = melee ? this.ownedMelee.has(weapon.id) : this.ownedWeapons.has(weapon.id);
+        if (owned) this.credits += fallback;
+        else if (melee) { this.ownedMelee.add(weapon.id); this.meleeId = weapon.id; }
+        else { this.ownedWeapons.set(weapon.id, this.weaponStats(weapon.id).mag); this.switchWeapon(weapon.id); }
+        this.emit('supplyReward', { label: owned ? `อาวุธซ้ำ · +${fallback} CR` : weapon.name });
+      }
+      if (kind === 'jackpot') { this.addReserve(24); this.credits += 50 + this.wave * 10; }
+    }
+  }
+  updateAirdrop(dt) {
+    if (this.ambush) {
+      this.ambush.delay = Math.max(0, this.ambush.delay - dt);
+      if (this.ambush.delay === 0) {
+        const a = this.ambush;
+        for (let i = 0; i < a.count; i++) {
+          const point = this.supplyPoint(a.kind === 'specialBoss' ? 25 : 21, a, 150);
+          if (!point) break;
+          if (a.kind === 'specialBoss') {
+            const spec = BOSSES[this.wave - 1], hp = spec.hp * this.scale * 1.25;
+            this.enemies.push({ ...spec, ...point, name: 'THE COLLECTOR', special: true, hp, maxHp: hp, type: 'boss', r: 25,
+              speed: 60, phase: 0, hit: 0, attackIndex: 0, stage: 1, attackClock: 2.5, windup: 0, dash: 0 });
+            this.emit('boss', { name: 'THE COLLECTOR', special: true });
+          } else {
+            const roll = this.random(), type = this.wave >= 4 && roll < .25 ? 'brute' : this.wave >= 2 && roll < .65 ? 'runner' : 'walker';
+            this.createZombie(type, point.x, point.y);
+          }
+        }
+        this.ambush = null; this.airdrop = null;
+      }
+      return;
+    }
+    if (this.airdropClock !== null) {
+      if (this.remaining === 0 && !this.enemies.some(e => e.hp > 0)) { this.airdropClock = null; return; }
+      this.airdropClock -= dt;
+      if (this.airdropClock <= 0) {
+        this.airdropClock = null;
+        const point = this.supplyPoint();
+        if (point) { this.airdrop = { ...point, state: 'falling', delay: 3, life: 30 }; this.emit('airdropIncoming'); }
+      }
+    }
+    const d = this.airdrop;
+    if (!d) return;
+    if (d.state === 'falling') { d.delay = Math.max(0, d.delay - dt); if (d.delay === 0) { d.state = 'landed'; this.emit('airdropLanded'); } }
+    else { d.life -= dt; if (d.life <= 0) this.airdrop = null; }
   }
   get usingMelee() { return this.gun.ammo <= 0 && this.gun.reserve <= 0; }
   get usingKnife() { return this.usingMelee && this.meleeId === 'knife'; }
@@ -297,14 +427,18 @@ export class Game {
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
           if (e.hp <= 0) {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            const credits = this.random() < .5 ? Math.round(reward * (this.wave + 2) / 10) : 0;
+            const credits = e.special ? 100 + this.wave * 20 : this.random() < .3 ? Math.round(reward * (this.wave + 2) / 10) : 0;
             this.kills++; this.score += reward * 10;
             if (credits > 0) this.drops.push({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();
             if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
-            if (e.type === 'boss') { this.hazards = []; this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward: credits }); }
+            if (e.special && this.remaining === 0 && !this.ambush && !this.enemies.some(other => other.hp > 0)) this.clearDelay = 10;
+            if (e.type === 'boss') {
+              this.hazards = this.enemies.some(other => other.type === 'boss' && other.hp > 0) ? this.hazards.filter(h => h.owner !== e) : [];
+              this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward: credits });
+            }
             this.emit('kill');
           }
   }
@@ -320,7 +454,7 @@ export class Game {
   }
   hurtPlayer(damage) {
     const p = this.player;
-    if (p.invulnerable > 0 || this.state !== 'playing') return;
+    if (p.invulnerable > 0 || this.buffs.shield > 0 || this.state !== 'playing') return;
     p.hp = Math.max(0, p.hp - damage * this.scale); p.invulnerable = .75;
     this.hitFlash = .22; this.emit('hurt'); this.burst(p.x, p.y, '#c36f4f', 10);
     if (p.hp <= 0) { this.state = 'dead'; this.emit('dead'); }
@@ -334,7 +468,7 @@ export class Game {
       e.windup = Math.max(0, e.windup - dt);
       if (e.windup === 0) {
         if (e.activeAbility === 'charge') e.dash = BOSS_CHARGE.duration;
-        else for (const target of e.attackTargets) this.hazards.push({ ...target, r: e.activeAbility === 'acid' ? 72 : 105, life: .35, damage: 24 + this.wave, color: e.activeAbility === 'acid' ? '#bddc65' : '#ef986f' });
+        else for (const target of e.attackTargets) this.hazards.push({ ...target, owner: e, r: e.activeAbility === 'acid' ? 72 : 105, life: .35, damage: (24 + this.wave) * (e.special ? 1.15 : 1), color: e.activeAbility === 'acid' ? '#bddc65' : '#ef986f' });
       }
     } else if (e.dash <= 0) {
       e.attackClock -= dt;
@@ -360,9 +494,12 @@ export class Game {
     let x = edge < 2 ? inset + this.random() * (W - inset * 2) : edge === 2 ? inset : W - inset;
     let y = edge >= 2 ? inset + this.random() * (H - inset * 2) : edge === 0 ? inset : H - inset;
     const roll = this.random(), type = this.wave >= 4 && roll < .17 ? 'brute' : this.wave >= 2 && roll < .4 ? 'runner' : 'walker';
+    this.createZombie(type, x, y);
+    this.remaining--;
+  }
+  createZombie(type, x, y) {
     const hp = (type === 'brute' ? 160 : type === 'runner' ? 42 : 65) * (1 + (this.wave - 1) * .1) * this.scale;
     this.enemies.push({ x, y, hp, maxHp: hp, type, r: type === 'brute' ? 21 : 14, speed: (type === 'runner' ? 125 : type === 'brute' ? 48 : 65) * (1 + this.wave * .025) * Math.sqrt(this.scale), phase: this.random() * 6.28, hit: 0 });
-    this.remaining--;
   }
   updatePaths(radius) {
     const graph = navigationGraph(radius, this.obstacles), visited = new Set();
@@ -383,6 +520,7 @@ export class Game {
     if (this.state !== 'playing') return;
     dt = Math.min(dt, .05); this.time += dt; this.banner = Math.max(0, this.banner - dt); this.hitFlash = Math.max(0, this.hitFlash - dt);
     const p = this.player, g = this.gun;
+    this.buffs.speed = Math.max(0, this.buffs.speed - dt); this.buffs.shield = Math.max(0, this.buffs.shield - dt);
     this.knifeCooldown = Math.max(0, this.knifeCooldown - dt);
     if (this.slash) { this.slash.life -= dt; if (this.slash.life <= 0) this.slash = null; }
     g.bloom = Math.max(0, g.bloom - dt * 1.2);
@@ -396,7 +534,8 @@ export class Game {
     const sprint = input.sprint && length > 0 && p.stamina > 2;
     p.stamina = clamp(p.stamina + (sprint ? -29 : 20) * dt, 0, 100);
     const oldX = p.x, oldY = p.y;
-    move(p, dx * p.speed * (sprint ? 1.65 : 1) * dt, dy * p.speed * (sprint ? 1.65 : 1) * dt, 14, this.obstacles);
+    const speed = p.speed * (this.buffs.speed > 0 ? 1.25 : 1) * (sprint ? 1.65 : 1);
+    move(p, dx * speed * dt, dy * speed * dt, 14, this.obstacles);
     p.moving = p.x !== oldX || p.y !== oldY; p.sprinting = !!sprint && p.moving;
     const aim = typeof input.aim === 'function' ? input.aim(p) : input.aim;
     if (aim) p.angle = Math.atan2(aim.y - p.y, aim.x - p.x);
@@ -411,6 +550,7 @@ export class Game {
       this.reload(); this.autoReloadPending = false;
     }
     if (input.fire) this.shoot();
+    this.updateAirdrop(dt);
     this.spawnClock -= dt;
     if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); if (this.remaining === 1 && !this.bossWarned) { this.bossWarned = true; this.spawnClock = 3; this.emit('bossIncoming'); } }
     this.pathClock -= dt;
@@ -435,7 +575,7 @@ export class Game {
       const direction = e.dashStep > 0 ? e.chargeAngle : a;
       move(e, Math.cos(direction) * step, Math.sin(direction) * step, e.r, this.obstacles);
       if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + 15 && p.invulnerable === 0) {
-        this.hurtPlayer(e.type === 'boss' ? 28 : e.type === 'brute' ? 24 : 12);
+        this.hurtPlayer(e.type === 'boss' ? 28 * (e.special ? 1.15 : 1) : e.type === 'brute' ? 24 : 12);
         if (this.state === 'dead') return;
       }
     }
@@ -484,8 +624,8 @@ export class Game {
     this.drops = this.drops.filter(d => d.life > 0);
     for (const a of this.particles) { a.x += a.vx * dt; a.y += a.vy * dt; a.life -= dt; }
     this.particles = this.particles.filter(a => a.life > 0);
-    if (this.remaining === 0 && this.enemies.length === 0) {
-      if (this.clearClock === null) { this.clearClock = 3; this.banner = 3; this.emit('waveCleared'); return; }
+    if (this.remaining === 0 && this.enemies.length === 0 && !this.ambush) {
+      if (this.clearClock === null) { this.clearClock = this.clearDelay; this.banner = 3; this.emit('waveCleared'); return; }
       this.clearClock = Math.max(0, this.clearClock - dt);
       if (this.clearClock > 0) return;
       if (this.wave >= 10) { this.state = 'won'; this.score += 5000; this.emit('won'); }

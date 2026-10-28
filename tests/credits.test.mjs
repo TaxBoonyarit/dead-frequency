@@ -11,14 +11,14 @@ function money(g, x = g.player.x, life = 22) {
   g.drops.push({ x, y: g.player.y, type: 'credits', amount: 5, life });
 }
 
-test('all zombie types roll a 50% money drop chance once per kill, including bosses', () => {
+test('all zombie types roll a 30% money drop chance once per kill, including bosses', () => {
   for (const [type, amount, score] of [['walker', 3, 100], ['runner', 5, 150], ['brute', 9, 300], ['boss', 18, 600]]) {
-    for (const roll of [0, .499999, .5, .999999]) {
+    for (const roll of [0, .299999, .3, .999999]) {
       const g = running(); let draws = 0;
       g.random = () => { draws++; return roll; };
       const e = { x: g.player.x + 100, y: g.player.y, hp: 1, r: 14, type, reward: 60 };
       g.damageEnemy(e, 1);
-      const money = g.drops.filter(d => d.type === 'credits'), drops = roll < .5;
+      const money = g.drops.filter(d => d.type === 'credits'), drops = roll < .3;
       assert.equal(money.length, drops ? 1 : 0, `${type}, roll ${roll}`);
       if (drops) assert.equal(money[0].amount, amount);
       assert.equal(g.kills, 1); assert.equal(g.score, score); assert.equal(g.credits, 0);
