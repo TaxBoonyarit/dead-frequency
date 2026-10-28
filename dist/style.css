@@ -186,16 +186,17 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
 
 .shop-categories{display:flex;gap:8px;margin:12px 0}.shop-categories button{padding:10px 20px;min-height:48px}.shop-categories button[aria-pressed=true]{background:#52633b;color:#fff}.melee-art{font-size:52px;text-align:center;padding:15px}.melee-status{position:absolute;left:12px;top:100px;pointer-events:none;color:#d5dfc5;background:#101b16aa;padding:5px 9px;font-size:12px;z-index:3}.touch-actions{display:grid;grid-template-columns:56px 78px;grid-template-rows:56px 78px;align-items:center;justify-items:center}#touch-fire{grid-column:2;grid-row:2}.touch-actions #touch-melee{grid-column:1;grid-row:2}.touch-actions #touch-reload{grid-column:1;grid-row:1}.touch-actions #touch-sprint{grid-column:2;grid-row:1}
 
-/* Mobile controls leave a clear gap between movement, combat and pause. */
+/* Leave thumb room inside the screen, in addition to the device safe area. */
+.touch-mode .touch-controls{padding-left:calc(clamp(28px,6vw,48px) + env(safe-area-inset-left));padding-right:calc(clamp(28px,6vw,48px) + env(safe-area-inset-right));padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+.touch-mode #joystick,.touch-mode .touch-actions{flex-shrink:0}
 .touch-mode .touch-actions{grid-template-columns:56px 78px;grid-template-rows:56px 78px;gap:10px}
 .touch-mode .touch-actions button{font:600 12px/1.4 var(--thai)}
-.touch-mode #pause-button{bottom:calc(178px + env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right))}
-.touch-mode .toast{bottom:calc(182px + env(safe-area-inset-bottom));max-width:calc(100% - 88px);white-space:normal;text-align:center}
+.touch-mode #pause-button{bottom:calc(192px + env(safe-area-inset-bottom));right:calc(clamp(28px,6vw,48px) + env(safe-area-inset-right))}
+.touch-mode .toast{bottom:calc(196px + env(safe-area-inset-bottom));max-width:calc(100% - 88px);white-space:normal;text-align:center}
 @media(max-width:800px){
   .touch-mode .hud-label{gap:6px;letter-spacing:0;flex-wrap:wrap}
   .touch-mode .hud small{font-size:10px}
   .touch-mode .melee-status{top:100px;left:max(9px,env(safe-area-inset-left));max-width:calc(100% - 18px);font-size:11px}
-  .touch-mode .touch-controls{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
   .touch-mode .game-tools button{min-height:44px;letter-spacing:0}
 }
 @media(max-width:520px){
