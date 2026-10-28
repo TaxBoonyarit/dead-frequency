@@ -13,12 +13,12 @@
   <div class="shell">
     <header class="topbar">
       <a class="brand" href="./" aria-label="Dead Frequency หน้าหลัก"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M3 21h8l4-12 8 24 5-17 4 5h5"/></svg><span>DEAD<br>FREQUENCY</span></a>
-      <div class="top-actions"><button id="manual-button" class="text-button">คู่มือ</button><button id="changelog-button" class="version" title="ดูบันทึกการอัปเดต"><span id="game-version">V1.0.21</span></button></div>
+      <div class="top-actions"><button id="manual-button" class="text-button">คู่มือ</button><button id="changelog-button" class="version" title="ดูบันทึกการอัปเดต"><span id="game-version">V1.0.22</span></button></div>
     </header>
     <main>
       <div class="operations">
         <section class="game-panel" aria-label="พื้นที่เล่นเกม">
-          <div class="panel-top"><div><span class="sector" id="scene-label">QUARANTINE BLOCK</span></div><div class="game-tools"><button id="shop-button" aria-label="เปิดร้านอาวุธ" title="ซื้อและสลับอาวุธหลังจบเวฟ">ร้านอาวุธ</button><button id="touch-mode-button" aria-label="โหมดจอสัมผัส" aria-pressed="false" title="เปิดปุ่มเดิน ยิง วิ่ง และรีโหลดบนจอ">สัมผัส</button><button id="sound-button" aria-label="เปิดเสียงเกม" title="เปิด/ปิดเสียง">เสียง: ปิด</button><button id="wake-lock-button" aria-pressed="false" title="เปิดหน้าจอค้างขณะอยู่ในเกม">กันจอดับ</button><button id="fullscreen-button" aria-pressed="false" aria-label="เต็มหน้าจอ" title="เต็มหน้าจอ">⛶</button></div></div>
+          <div class="panel-top"><div><span class="sector" id="scene-label">QUARANTINE BLOCK</span></div><div class="game-tools"><button id="shop-button" aria-label="เปิดร้านอาวุธ" title="ซื้อและสลับอาวุธหลังจบเวฟ">ร้านอาวุธ</button><button id="touch-mode-button" aria-label="โหมดจอสัมผัส" aria-pressed="false" title="เปิดปุ่มเดิน ยิง วิ่ง และรีโหลดบนจอ">สัมผัส</button><button id="sound-button" aria-label="เปิดเสียงเกม" title="เปิด/ปิดเสียง">เสียง: ปิด</button><button id="wake-lock-button" aria-pressed="false" title="เปิดหน้าจอค้างขณะอยู่ในเกม">กันจอดับ</button><button id="pause-button" aria-label="หยุดเกมชั่วคราว" hidden>พัก</button><button id="fullscreen-button" aria-pressed="false" aria-label="เต็มหน้าจอ" title="เต็มหน้าจอ">⛶</button></div></div>
           <div class="viewport" id="viewport">
             <canvas id="game" width="1280" height="800" aria-label="เกมยิงซอมบี้ ใช้ WASD และเมาส์ หรือจอยกับปุ่มสัมผัสเพื่อเดิน ยิง วิ่ง และรีโหลด" tabindex="0"></canvas>
             <div class="hud" id="hud" hidden>
@@ -32,7 +32,6 @@
             <div class="overlay state-overlay" id="state-overlay" hidden><div id="state-content" role="region" aria-label="สถานะภารกิจ" tabindex="-1"></div></div>
             <div id="boss-hud" class="boss-hud" hidden><strong id="boss-name"></strong><div><i id="boss-health"></i></div><small>หลบสีส้ม · ชนะบอสเพื่อผ่านเวฟ</small></div><div class="wave-banner" id="wave-banner" hidden></div>
             <div class="toast" id="toast" role="status" hidden></div>
-            <button id="pause-button" class="pause-button" aria-label="หยุดเกมชั่วคราว" hidden>Ⅱ</button>
             <div id="melee-status" class="melee-status" role="status"></div><div class="touch-controls" id="touch-controls" hidden><div id="joystick" aria-label="ลากเพื่อเดิน"><i id="joystick-knob"></i></div><div class="touch-actions"><button id="touch-sprint" aria-label="กดค้างเพื่อวิ่ง">วิ่ง</button><button id="touch-melee" aria-label="ตีด้วยอาวุธประชิด">ตี</button><button id="touch-reload" aria-label="รีโหลด">รีโหลด</button><button id="touch-fire" aria-label="กดค้างเพื่อยิง ขยับนิ้วเพื่อเล็ง"><span class="fire-thumb" aria-hidden="true"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="10"/><path d="M20 2v10m0 16v10M2 20h10m16 0h10"/><circle class="aim-dot" cx="20" cy="20" r="2"/></svg></span><span class="fire-label">กดยิง</span></button></div></div>
           </div>
           <div class="panel-bottom"><span><i class="status-dot"></i> <span id="feed-status">AWAITING SURVIVOR</span></span><span id="session-time">00:00:00</span></div>
