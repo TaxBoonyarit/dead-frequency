@@ -19,12 +19,13 @@ export function keyboardMovement(keys) {
 }
 
 export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
-  let stickId = null;
+  let stickId = null, fireOrigin = null;
   const held = new Map();
   const input = { x: 0, y: 0, firing: false, sprinting: false, aim: null, reset };
   function reset() {
     stickId = null; held.clear(); input.x = input.y = 0;
     input.firing = input.sprinting = false; input.aim = null; knob.style.transform = '';
+    fireOrigin = null; centerFireThumb();
     fire.classList.remove('held'); sprint.classList.remove('held');
   }
   function drag(e) {
@@ -32,8 +33,6 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     const dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2;
     const length = Math.hypot(dx, dy), scale = Math.min(1, radius / (length || 1));
     input.x = dx * scale / radius; input.y = dy * scale / radius;
-    // Keep the last deliberate walking direction when the stick returns to center.
-    if (length >= 8) input.aim = { x: dx / length, y: dy / length };
     knob.style.transform = `translate(${dx * scale}px,${dy * scale}px)`;
   }
   stick.addEventListener('pointerdown', e => {
@@ -49,12 +48,28 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     button.addEventListener('pointerdown', e => {
       if (!canUse() || held.has(action) || e.button !== 0) return;
       e.preventDefault(); held.set(action, e.pointerId); input[action] = true;
+      if (action === 'firing') fireOrigin = { x: e.clientX, y: e.clientY };
       button.classList.add('held'); button.setPointerCapture(e.pointerId);
     });
     for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, e => {
       if (held.get(action) !== e.pointerId) return;
       held.delete(action); input[action] = false; button.classList.remove('held');
+      if (action === 'firing') { fireOrigin = null; centerFireThumb(); }
     });
   }
+  function centerFireThumb() {
+    fire.style.setProperty('--aim-x', '0px'); fire.style.setProperty('--aim-y', '0px');
+  }
+  fire.addEventListener('pointermove', e => {
+    if (held.get('firing') !== e.pointerId || !fireOrigin) return;
+    e.preventDefault();
+    const dx = e.clientX - fireOrigin.x, dy = e.clientY - fireOrigin.y, length = Math.hypot(dx, dy);
+    // Small finger shifts keep the last aim; they never gate or stop firing.
+    if (length < 8) return;
+    input.aim = { x: dx / length, y: dy / length };
+    const radius = Math.min(20, length);
+    fire.style.setProperty('--aim-x', `${input.aim.x * radius}px`);
+    fire.style.setProperty('--aim-y', `${input.aim.y * radius}px`);
+  });
   return input;
 }
