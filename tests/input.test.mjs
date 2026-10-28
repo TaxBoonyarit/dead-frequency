@@ -67,33 +67,39 @@ test('simultaneous movement, manual aim, sprint and fire work in the engine', ()
   assert.ok(Math.abs(game.player.angle)<.01);assert.ok(game.bullets[0].vx>0);
 });
 
-test('holding fire shoots immediately; moving the fire finger never changes direction', async () => {
+test('holding fire shoots immediately and finger jitter never stops firing', async () => {
   const {bindTouchControls}=await import('../dist/input.mjs');
   const stick=element(),knob=element(),fire=element(),sprint=element();
   const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
   fire.send('pointerdown',2);assert.equal(input.firing,true);assert.equal(input.aim,null);
-  fire.send('pointermove',2,200,0);assert.equal(input.firing,true);assert.equal(input.aim,null);
+  fire.send('pointermove',2,50,46);assert.equal(input.firing,true);assert.equal(input.aim,null);
   fire.send('pointerup',3);assert.equal(input.firing,true);
   fire.send('pointerup',2);assert.equal(input.firing,false);
 });
 
-test('joystick sets and retains manual shot direction without following enemies', async () => {
+test('right-finger aiming is independent of walking and never follows enemies', async () => {
   const {bindTouchControls}=await import('../dist/input.mjs');
   for(const [dx,dy] of [[100,0],[-100,0],[0,100],[0,-100]]) {
     const stick=element(),knob=element(),fire=element(),sprint=element();
     const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
-    stick.send('pointerdown',1,46+dx,46+dy);
+    stick.send('pointerdown',1,46-dx,46-dy);assert.equal(input.aim,null);
+    fire.send('pointerdown',2,35,50);assert.equal(input.firing,true);
+    fire.send('pointermove',2,35+dx,50+dy);
     const direction={...input.aim};
-    stick.send('pointermove',1,47,46);assert.deepEqual(input.aim,direction);
-    stick.send('pointerup',1);assert.equal(input.x,0);assert.equal(input.y,0);
-    fire.send('pointerdown',2);
+    fire.send('pointermove',3,200,0);assert.deepEqual(input.aim,direction);
+    stick.send('pointermove',1,46+dx,46+dy);assert.deepEqual(input.aim,direction);
     const g=new Game(()=>.5);g.start();g.obstacles=[];g.spawnClock=999;g.remaining=999;
     g.enemies=[{x:g.player.x-dx,y:g.player.y-dy,hp:100,maxHp:100,type:'walker',r:14,speed:0,phase:0,hit:0}];
-    g.update(.01,{fire:input.firing,aim:p=>({x:p.x+input.aim.x*1000,y:p.y+input.aim.y*1000})});
+    g.update(.01,{x:input.x,y:input.y,fire:input.firing,aim:p=>({x:p.x+input.aim.x*1000,y:p.y+input.aim.y*1000})});
     const bullet=g.bullets[0];assert.ok(bullet.vx*dx+bullet.vy*dy>0);
     assert.ok(Math.abs(bullet.vx*dy-bullet.vy*dx)<1e-6);
-    fire.send('pointerup',2);assert.deepEqual(input.aim,direction);
-    input.reset();assert.equal(input.aim,null);assert.equal(input.firing,false);
+    fire.send('pointermove',2,36,50);assert.deepEqual(input.aim,direction);assert.equal(input.firing,true);
+    fire.send('pointerup',2);assert.deepEqual(input.aim,direction);assert.equal(input.firing,false);
+    assert.equal(fire.style['--aim-x'],'0px');
+    fire.send('pointerdown',4,20,20);assert.equal(input.firing,true);assert.deepEqual(input.aim,direction);
+    fire.send('pointermove',4,20,120);assert.deepEqual(input.aim,{x:0,y:1});
+    fire.send('pointercancel',4);assert.equal(input.firing,false);assert.ok(Math.abs(input.x-dx/100)<1e-9);
+    input.reset();fire.send('pointermove',4,200,20);assert.equal(input.aim,null);assert.equal(input.firing,false);
   }
 });
 

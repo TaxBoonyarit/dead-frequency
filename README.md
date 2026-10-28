@@ -28,7 +28,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง
 - Esc / P: พักเกม
-- มือถือ: ลากวงกลมซ้ายเพื่อเดิน ใช้จอยซ้ายหันทิศและกดปุ่มยิงค้าง กด R เพื่อรีโหลด
+- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กดปุ่มยิงค้างเพื่อยิงทันที ขยับนิ้วขวาเพื่อเล็ง กด R เพื่อรีโหลด
 
 จบแต่ละระลอกจะได้เลือกอัปเกรด 1 อย่าง กระสุนสำรอง 36 นัด และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
 
@@ -146,13 +146,15 @@ and restore accuracy.
 ## Touchscreen controls
 
 Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “สัมผัส” toolbar button toggles them on any
-device. Use the left stick to move and face the shooting direction. Hold กดยิง
-to fire immediately in that direction; releasing the stick retains the last
-facing direction so you can stop and shoot. Before moving, shots use the current
-facing direction. Dragging the fire button does not aim. There is no automatic
-aiming or target locking. Hold วิ่ง to sprint and tap รีโหลด to reload.
-Each action tracks its own finger; releasing or cancelling it stops only that
-action. Pausing, switching modes and leaving the app clear held controls.
+device. The left stick only moves the survivor. Hold กดยิง to fire immediately
+in the last manually aimed direction; no drag is required to start shooting.
+Move the firing finger relative to its initial touch to change aim independently
+of movement. Movements under 8px retain the previous aim without stopping fire.
+Release the firing finger to stop shooting and retain aim for the next press.
+There is no automatic aiming or target locking. Hold วิ่ง to sprint and tap
+รีโหลด to reload. Each action tracks its own finger; releasing or cancelling it
+stops only that action. Pausing, switching modes and leaving the app clear held
+controls. The survivor's facing direction remains the fallback after a reset.
 
 The cyan mobile reticle and spread ring show the current manual shot direction
 and accuracy. The ring turns amber during reloads. Touch targets are at least
