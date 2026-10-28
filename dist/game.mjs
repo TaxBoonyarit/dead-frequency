@@ -524,7 +524,7 @@ function touchAim(player) {
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   const movement = keyboardMovement(keys);
-  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing && !!touchInput.aim : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
+  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
   for (const e of game.events.splice(0)) {
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
     if (e.type === 'slash') tone(180, .08, 'triangle', .035, 60);

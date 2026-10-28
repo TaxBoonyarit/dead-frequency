@@ -61,9 +61,9 @@ button,summary{touch-action:manipulation}summary:focus-visible{outline:2px solid
 .touch-mode .panel-top>div:first-child{min-width:0;overflow:hidden;flex:1}.touch-mode .game-tools{flex-shrink:0}.touch-mode .game-tools button{white-space:nowrap}@media(max-width:360px){.touch-mode .panel-top .sector{max-width:64px;font-size:7px}.touch-mode .game-tools{gap:4px}.touch-mode .game-tools button{font-size:9px}}
 @media(max-height:520px) and (orientation:landscape){.touch-mode.game-active .operations{grid-template-columns:minmax(0,1fr)}}
 
-#touch-fire{position:relative;overflow:visible;background:radial-gradient(circle at 50% 40%,#304b44ee,#12271fe8);border:1px solid #a4f1e099;box-shadow:inset 0 0 0 4px #a4f1e00b,0 3px 12px #07120dcc;color:#b9f5e5}#touch-fire::before{content:'';position:absolute;inset:5px;border:1px solid #a4f1e025;border-radius:50%;pointer-events:none}#touch-fire .fire-thumb{position:absolute;left:50%;top:41%;width:32px;height:32px;margin:-16px 0 0 -16px;transform:translate(var(--aim-x,0px),var(--aim-y,0px));pointer-events:none}#touch-fire svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}.fire-thumb .aim-dot{fill:currentColor;stroke:none}#touch-fire .fire-label{position:absolute;bottom:7px;left:0;right:0;font:10px var(--thai);pointer-events:none}#touch-fire.held{color:#e1fff5;background:radial-gradient(circle at center,#396b5e,#1c4237);border-color:#bfffe9;box-shadow:0 0 0 4px #a4f1e016,inset 0 0 22px #9befce20}#touch-fire.held::before{border-style:dashed;border-color:#bbfbe84d}#touch-fire.held .fire-thumb{filter:drop-shadow(0 0 5px #a4f1e077)}@media(prefers-reduced-motion:no-preference){#touch-fire{transition:background .12s,box-shadow .12s}}
+#touch-fire{position:relative;overflow:visible;background:radial-gradient(circle at 50% 40%,#304b44ee,#12271fe8);border:1px solid #a4f1e099;box-shadow:inset 0 0 0 4px #a4f1e00b,0 3px 12px #07120dcc;color:#b9f5e5}#touch-fire::before{content:'';position:absolute;inset:5px;border:1px solid #a4f1e025;border-radius:50%;pointer-events:none}#touch-fire .fire-thumb{position:absolute;left:50%;top:41%;width:32px;height:32px;margin:-16px 0 0 -16px;pointer-events:none}#touch-fire svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}.fire-thumb .aim-dot{fill:currentColor;stroke:none}#touch-fire .fire-label{position:absolute;bottom:7px;left:0;right:0;font:10px var(--thai);pointer-events:none}#touch-fire.held{color:#e1fff5;background:radial-gradient(circle at center,#396b5e,#1c4237);border-color:#bfffe9;box-shadow:0 0 0 4px #a4f1e016,inset 0 0 22px #9befce20}#touch-fire.held::before{border-style:dashed;border-color:#bbfbe84d}#touch-fire.held .fire-thumb{filter:drop-shadow(0 0 5px #a4f1e077)}@media(prefers-reduced-motion:no-preference){#touch-fire{transition:background .12s,box-shadow .12s}}
 
-#touch-fire.held:not(.aiming){border-color:#b8ccc4;box-shadow:inset 0 0 0 4px #a4f1e00b}#touch-fire.held:not(.aiming) .fire-label{font-size:0}#touch-fire.held:not(.aiming) .fire-label::after{content:'ลากเพื่อยิง';font-size:9px}#touch-fire.aiming .fire-label{font-size:0}#touch-fire.aiming .fire-label::after{content:'กำลังยิง';font-size:9px}
+#touch-fire.held .fire-label{font-size:0}#touch-fire.held .fire-label::after{content:'กำลังยิง';font-size:9px}
 /* Phone layout: wider arena framing and quieter controls. */
 @media(max-width:800px){
   .touch-mode.game-active .shell{padding:0}
@@ -85,7 +85,6 @@ button,summary{touch-action:manipulation}summary:focus-visible{outline:2px solid
   .touch-mode #touch-fire{background:radial-gradient(circle,#70988b22,#142c242e);border-color:#b4d8c55c;box-shadow:inset 0 0 0 4px #b9d6c408;color:#c8e5d6}
   .touch-mode #touch-fire::before{border-color:#c4ddce25}
   .touch-mode #touch-fire.held{background:#5279664d;border-color:#d4f0df9c;box-shadow:0 0 0 3px #bbdfc714}
-  .touch-mode #touch-fire.held:not(.aiming){box-shadow:inset 0 0 0 4px #c4dec70b}
   .touch-mode .touch-actions button.held{background:#657e494d;box-shadow:0 0 0 2px #c4d8ad20}
   .touch-mode #pause-button{background:#18271a66;border-color:#b0c39c4d;color:#cedbc3}
 }
@@ -186,3 +185,44 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
 @media(max-width:520px){#changelog h2{font-size:24px}.release summary{gap:10px;padding:10px 12px}.release ul{padding:0 12px 12px}.release li{grid-template-columns:38px 1fr}}
 
 .shop-categories{display:flex;gap:8px;margin:12px 0}.shop-categories button{padding:10px 20px;min-height:48px}.shop-categories button[aria-pressed=true]{background:#52633b;color:#fff}.melee-art{font-size:52px;text-align:center;padding:15px}.melee-status{position:absolute;left:12px;top:100px;pointer-events:none;color:#d5dfc5;background:#101b16aa;padding:5px 9px;font-size:12px;z-index:3}.touch-actions{display:grid;grid-template-columns:56px 78px;grid-template-rows:56px 78px;align-items:center;justify-items:center}#touch-fire{grid-column:2;grid-row:2}.touch-actions #touch-melee{grid-column:1;grid-row:2}.touch-actions #touch-reload{grid-column:1;grid-row:1}.touch-actions #touch-sprint{grid-column:2;grid-row:1}
+
+/* Mobile controls leave a clear gap between movement, combat and pause. */
+.touch-mode .touch-actions{grid-template-columns:56px 78px;grid-template-rows:56px 78px;gap:10px}
+.touch-mode .touch-actions button{font:600 12px/1.4 var(--thai)}
+.touch-mode #pause-button{bottom:calc(178px + env(safe-area-inset-bottom));right:max(16px,env(safe-area-inset-right))}
+.touch-mode .toast{bottom:calc(182px + env(safe-area-inset-bottom));max-width:calc(100% - 88px);white-space:normal;text-align:center}
+@media(max-width:800px){
+  .touch-mode .hud-label{gap:6px;letter-spacing:0;flex-wrap:wrap}
+  .touch-mode .hud small{font-size:10px}
+  .touch-mode .melee-status{top:100px;left:max(9px,env(safe-area-inset-left));max-width:calc(100% - 18px);font-size:11px}
+  .touch-mode .touch-controls{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+  .touch-mode .game-tools button{min-height:44px;letter-spacing:0}
+}
+@media(max-width:520px){
+  .state-overlay{align-items:flex-start}
+  #state-content{padding:24px 16px max(24px,env(safe-area-inset-bottom));overscroll-behavior:contain}
+  .state-title{font-size:clamp(28px,8vw,40px);line-height:1.15;overflow-wrap:anywhere}
+  .state-eyebrow{font-size:10px;letter-spacing:1px}
+  .upgrade-grid{max-width:none}
+  .upgrade-card{min-height:88px;padding:14px;gap:4px 12px}
+  .upgrade-card em,.upgrade-card small{font-size:12px;line-height:1.6}
+  .upgrade-card .select-label{display:flex;grid-column:2;font-size:11px;margin-top:4px}
+  .result-stats{gap:16px;flex-wrap:wrap}.result-stats span{font-size:10px}
+  #state-content>.primary,#state-content>.secondary{width:100%;min-height:48px;margin-top:10px}
+  .shop-categories{display:grid;grid-template-columns:1fr 1fr;padding:8px 0;margin:0}
+  .shop-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .shop-filters button{padding:8px 4px;min-width:0}
+  .armory-footer{grid-template-columns:minmax(0,1fr)}
+  #shop-equipped{font-size:12px;overflow-wrap:anywhere}
+  .armory-footer .primary{width:100%;min-height:48px}
+  .menu-content>.primary{width:100%;min-height:52px}
+  dialog{max-height:calc(100dvh - 24px);overscroll-behavior:contain}
+}
+@media(max-width:360px){
+  .touch-mode .touch-actions{grid-template-columns:48px 64px;grid-template-rows:48px 64px;gap:8px}
+  .touch-mode .touch-actions button{font-size:11px}
+}
+@media(max-height:520px) and (orientation:landscape){
+  .touch-mode.game-active .viewport{height:calc(100dvh - 48px);min-height:0}
+  .touch-mode .boss-hud{top:88px;width:min(300px,44%)}
+}
