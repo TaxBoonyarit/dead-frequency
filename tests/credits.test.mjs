@@ -11,6 +11,26 @@ function money(g, x = g.player.x, life = 22) {
   g.drops.push({ x, y: g.player.y, type: 'credits', amount: 5, life });
 }
 
+test('all zombie types roll a 50% money drop chance once per kill, including bosses', () => {
+  for (const [type, amount, score] of [['walker', 3, 100], ['runner', 5, 150], ['brute', 9, 300], ['boss', 18, 600]]) {
+    for (const roll of [0, .499999, .5, .999999]) {
+      const g = running(); let draws = 0;
+      g.random = () => { draws++; return roll; };
+      const e = { x: g.player.x + 100, y: g.player.y, hp: 1, r: 14, type, reward: 60 };
+      g.damageEnemy(e, 1);
+      const money = g.drops.filter(d => d.type === 'credits'), drops = roll < .5;
+      assert.equal(money.length, drops ? 1 : 0, `${type}, roll ${roll}`);
+      if (drops) assert.equal(money[0].amount, amount);
+      assert.equal(g.kills, 1); assert.equal(g.score, score); assert.equal(g.credits, 0);
+      if (type === 'boss') assert.equal(g.events.find(e => e.type === 'bossDown').reward, drops ? amount : 0);
+      const drawsBefore = draws;
+      g.damageEnemy(e, 1); assert.equal(draws, drawsBefore);
+      assert.equal(g.kills, 1); assert.equal(g.score, score);
+      g.player.x = e.x; g.update(.01); assert.equal(g.credits, drops ? amount : 0);
+    }
+  }
+});
+
 test('money requires walking within pickup range and is collected once even with full supplies', () => {
   const g = running(), x = g.player.x; money(g, x + 60);
   g.update(.01); assert.equal(g.credits, 0); assert.equal(g.drops.length, 1);

@@ -297,9 +297,9 @@ export class Game {
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
           if (e.hp <= 0) {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            const credits = Math.round(reward * (this.wave + 2) / 10);
+            const credits = this.random() < .5 ? Math.round(reward * (this.wave + 2) / 10) : 0;
             this.kills++; this.score += reward * 10;
-            this.drops.push({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
+            if (credits > 0) this.drops.push({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();

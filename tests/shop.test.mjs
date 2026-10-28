@@ -12,6 +12,7 @@ function target(g, type = 'walker', hp = 10) {
 
 test('early kills require saving before an SMG purchase equips it', () => {
   const g = new Game(() => .5); g.start(); g.remaining = 0; g.player.angle = 0;
+  g.random = () => .49;
   g.enemies = Array.from({ length: 9 }, () => target(g));
   while (g.state === 'playing') g.update(.05, { fire: true });
   assert.equal(g.state, 'upgrade'); assert.equal(g.credits, 27); assert.equal(g.score, 900);
@@ -58,6 +59,7 @@ test('weapon upgrades carry across purchases and switches without multiplying tw
 
 test('shotguns spread six pellets while using one shell and rewarding a kill once', () => {
   const g = shop(350); g.buyWeapon('shotgun'); g.state = 'playing'; g.remaining = 999; g.spawnClock = 999;
+  g.random = () => .49;
   g.player.angle = 0; g.enemies = [target(g)];
   g.shoot(); assert.equal(g.bullets.length, 6); assert.equal(g.gun.ammo, 5);
   assert.ok(g.bullets[0].vy < 0); assert.ok(g.bullets[5].vy > 0);
@@ -72,6 +74,7 @@ test('zombie money starts small and increases each wave, while scores stay uncha
   ]) {
     rewards.forEach((amount, index) => {
       const g = new Game(() => .5); g.start(); g.wave = index + 1; g.obstacles = [];
+      g.random = () => .49;
       const e = target(g, type); e.x += 100; g.enemies = [e];
       g.damageEnemy(e, 10); g.damageEnemy(e, 10);
       assert.equal(g.credits, 0); assert.equal(g.kills, 1); assert.equal(g.score, score);
