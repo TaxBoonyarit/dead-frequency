@@ -1,5 +1,8 @@
 // Player-facing release notes, newest first. The first entry must match package.json.
 export const CHANGELOG = [
+  { version: '1.0.22', date: '2026-10-28', changes: [
+    { type: 'improved', text: 'นำปุ่มพัก Ⅱ ที่ลอยในพื้นที่เล่นออก ย้ายเป็นปุ่มพักบนแถบเครื่องมือด้านบน ใช้ได้ทั้งมือถือและโหมดเต็มจอ' },
+  ] },
   { version: '1.0.21', date: '2026-10-28', changes: [
     { type: 'improved', text: 'ลดงานคำนวณตรวจชนกระสุนกับศัตรู โดยคงลำดับการชน กำแพง และระยะโดนกระสุนเดิม' },
     { type: 'improved', text: 'ลดการสร้าง HTML ของเลขระลอกและกระสุนซ้ำเมื่อค่าไม่เปลี่ยน พร้อมเพิ่มการทดสอบขอบเขตการชนและการอัปเดต HUD' },
