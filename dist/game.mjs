@@ -275,8 +275,10 @@ function updateHUD() {
   $('health-label').textContent = Math.ceil(p.hp); $('health-bar').style.width = `${p.hp / p.maxHp * 100}%`; $('health-bar').style.background = p.hp < 30 ? '#d98d67' : '';
   $('stamina-bar').style.width = `${p.stamina}%`;
   $('threat-count').textContent = `เหลือ ${game.remaining + game.enemies.length} ตัว${game.remaining === 1 ? ' · บอสกำลังมา' : ''}`;
-  $('wave-label').innerHTML = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
-  $('ammo-label').innerHTML = game.usingMelee ? '∞ <small>ประชิด</small>' : `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
+  const wave = `${String(game.wave).padStart(2, '0')} <small>/ 10</small>`;
+  if ($('wave-label').innerHTML !== wave) $('wave-label').innerHTML = wave;
+  const ammo = game.usingMelee ? '∞ <small>ประชิด</small>' : `${String(g.ammo).padStart(2, '0')} <small>/ ${g.reserve}</small>`;
+  if ($('ammo-label').innerHTML !== ammo) $('ammo-label').innerHTML = ammo;
   $('gun-status').textContent = g.reload > 0 ? 'RELOADING…' : game.usingMelee ? `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} / ระยะประชิด` : WEAPONS.find(w => w.id === game.weaponId).name;
   $('melee-status').hidden = !['playing', 'paused'].includes(game.state);
   $('melee-status').textContent = `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} · ${game.melee.cooldown > 0 ? game.melee.cooldown.toFixed(1) + 's' : 'F / ตี'}`;

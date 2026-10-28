@@ -132,11 +132,6 @@ function approachPoint(from, player, radius, obstacles) {
   }
   return best;
 }
-function segmentHit(ax, ay, bx, by, cx, cy, radius) {
-  const dx = bx - ax, dy = by - ay;
-  const t = clamp(((cx - ax) * dx + (cy - ay) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-  return Math.hypot(ax + dx * t - cx, ay + dy * t - cy) < radius;
-}
 export class Game {
   constructor(random = Math.random) { this.random = random; this.events = []; this.reset(); }
   reset(difficulty = 'survivor') {
@@ -456,7 +451,12 @@ export class Game {
       for (let s = 1; s <= steps && b.life > 0; s++) {
         const sx = b.x + (nx - b.x) * s / steps, sy = b.y + (ny - b.y) * s / steps;
         if (blocked(sx, sy, 1, this.obstacles)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
-        const e = this.enemies.find(e => e.hp > 0 && segmentHit(sx, sy, sx, sy, e.x, e.y, e.r + 3));
+        let e;
+        for (const candidate of this.enemies) {
+          if (!(candidate.hp > 0)) continue;
+          const dx = sx - candidate.x, dy = sy - candidate.y, radius = candidate.r + 3;
+          if (dx * dx + dy * dy < radius * radius) { e = candidate; break; }
+        }
         if (e) {
           if (b.knockback) {
             const distance = b.knockback * (e.type === 'boss' ? .25 : 1), length = Math.hypot(b.vx, b.vy) || 1;

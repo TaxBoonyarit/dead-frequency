@@ -127,3 +127,13 @@ test('wave clear leaves three seconds to collect supplies and pauses its countdo
   assert.equal(g.events.filter(e=>e.type==='waveCleared').length,1);
   g.upgrade(g.choices[0].id);assert.equal(g.clearClock,null);
 });
+
+test('bullet collision keeps the same strict hit radius for small and large enemies', () => {
+  for (const radius of [14, 21, 30]) for (const offset of [-.001, 0, .001]) {
+    const g=running();g.obstacles=[];g.player.invulnerable=100;
+    const target=enemy(900,400);target.r=radius;target.speed=0;g.enemies=[target];
+    g.bullets=[{x:895,y:400+radius+3+offset,vx:500,vy:0,life:1,damage:10}];
+    g.update(.01);
+    assert.equal(target.hp,offset<0?55:65,`radius ${radius}, offset ${offset}`);
+  }
+});
