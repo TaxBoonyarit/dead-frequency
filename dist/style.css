@@ -263,3 +263,29 @@ button.version:hover{border-color:var(--accent);color:var(--text)}
   .menu-content .menu-note{font-size:11px}
   #menu-overlay .feed-corner,#menu-overlay .feed-time{display:none}
 }
+
+/* Compact setup: icons carry secondary information without extra text rows. */
+.menu-content svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;vertical-align:middle;flex-shrink:0}
+.menu-content .mission-summary{display:flex;align-items:center;justify-content:center;gap:8px;margin:8px 0 16px}
+.menu-content .character-options button{min-height:84px;gap:8px}
+.menu-content .character-stats{display:flex;gap:16px;align-items:center}
+.character-stats>span{display:inline-flex;gap:5px;align-items:center;white-space:nowrap;font-variant-numeric:tabular-nums}
+.character-stats>span:first-child{color:#d5b5a2}.character-stats>span:last-child{color:#c8dba7}
+.menu-content .touch-hint{justify-content:center;gap:24px;margin:12px 0}
+.touch-mode .menu-content .touch-hint{display:flex;flex-wrap:wrap}
+.touch-hint>span{display:inline-flex;align-items:center;gap:6px}
+.menu-content .menu-note{margin-top:12px}
+@media(max-width:900px){
+  .menu-content{padding:18px 16px}
+  .menu-content h2{font-size:clamp(24px,5vw,32px);margin:0 0 8px}
+  .menu-content h2 br,.menu-content h2>span{display:none}
+  .menu-content .character-picker,.menu-content .difficulty-section{margin:14px 0}
+  .menu-content .character-picker legend{margin-bottom:6px}
+  .menu-content .character-options button{min-height:80px;padding:12px 10px}
+  .menu-content .character-options button[aria-pressed=true]{padding:11px 9px}
+  .menu-content .character-options small{display:block;margin:2px 0 0}
+  .menu-content .character-stats{gap:12px;font-size:13px}
+  .menu-content .difficulty-section p{font-size:12px;margin-top:4px}
+  .menu-content .touch-hint{font-size:12px;gap:20px}
+  body:not(.game-active) .panel-bottom,body:not(.game-active) footer{display:none}
+}

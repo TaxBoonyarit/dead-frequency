@@ -412,7 +412,7 @@ $('armory').addEventListener('close', () => {
   pausedForShop = false;
 });
 const characterOptions = $('character-options');
-characterOptions.innerHTML = CHARACTERS.map(c => `<button type="button" data-character="${c.id}" aria-pressed="${game.characterId === c.id}" style="--character-color:${c.color}"><span class="character-symbol" aria-hidden="true">${c.id === 'female' ? '♀' : '♂'}</span><strong>${c.name} <small>${c.role}</small></strong><span>เลือด ${c.hp} HP</span><span>เร็ว ${c.speed}</span></button>`).join('');
+characterOptions.innerHTML = CHARACTERS.map(c => `<button type="button" data-character="${c.id}" aria-pressed="${game.characterId === c.id}" style="--character-color:${c.color}"><span class="character-symbol" aria-hidden="true">${c.id === 'female' ? '♀' : '♂'}</span><strong>${c.name} <small>${c.role}</small></strong><span class="character-stats"><span aria-label="เลือด ${c.hp} HP" title="เลือด"><span aria-hidden="true">♥</span> ${c.hp}</span><span aria-label="ความเร็ว ${c.speed}" title="ความเร็ว"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z"/></svg> ${c.speed}</span></span></button>`).join('');
 characterOptions.querySelectorAll('[data-character]').forEach(button => {
   button.onclick = () => {
     if (!game.selectCharacter(button.dataset.character)) return;
