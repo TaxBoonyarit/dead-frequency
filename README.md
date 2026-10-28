@@ -1,6 +1,6 @@
 # DEAD FREQUENCY
 
-ประวัติการเปลี่ยนแปลง: [CHANGELOG.md](CHANGELOG.md)
+ประวัติการเปลี่ยนแปลง: [CHANGELOG.md](CHANGELOG.md) · แนวทางพัฒนา: [AGENTS.md](AGENTS.md)
 
 เกมเอาตัวรอดจากซอมบี้มุมมองด้านบน เล่นคนเดียวในเบราว์เซอร์ รอดให้ครบ 10 ระลอกเพื่อจบภารกิจ
 
@@ -26,11 +26,11 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 
 - WASD / ปุ่มลูกศร: เดิน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
-- R: รีโหลด, Shift: วิ่ง
+- R: รีโหลด, Shift: วิ่ง, F: ใช้อาวุธประชิด
 - Esc / P: พักเกม
-- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กดปุ่มยิงค้างเพื่อยิงทันที ขยับนิ้วขวาเพื่อเล็ง กด R เพื่อรีโหลด
+- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กดปุ่มยิงค้างเพื่อยิงทันที ขยับนิ้วขวาเพื่อเล็ง กดรีโหลดเพื่อเติมกระสุน และกดตีเพื่อใช้อาวุธประชิด
 
-จบแต่ละระลอกจะได้เลือกอัปเกรด 1 อย่าง กระสุนสำรอง 36 นัด และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
+จบแต่ละระลอกจะได้เลือกอัปเกรด 1 อย่าง เติมกระสุนสำรอง 18 นัด (สูงสุด 120 นัด) แล้วเติมแมกกาซีนจากกระสุนสำรอง และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
 
 ## ร้านอาวุธ
 
@@ -42,6 +42,10 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 | V9 Stinger | 220 CR | ปืนกลมือ 30 นัด ยิงรัว |
 | Breacher 12 | 350 CR | ลูกซอง 6 นัด กระจาย 6 เม็ดต่อการยิง |
 | Ranger R8 | 450 CR | ไรเฟิล 10 นัด ความเสียหายสูง |
+| Judge .44 | 300 CR | รีวอลเวอร์ 6 นัด แรงต่อหนึ่งนัดสูง |
+| Vanguard A4 | 650 CR | ปืนจู่โจม 30 นัด ยิงอัตโนมัติ |
+| Bastion M60 | 950 CR | ปืนกลหนัก 75 นัด รีโหลดช้า |
+| Longwatch .50 | 1200 CR | สไนเปอร์ 5 นัด พลังสูงสำหรับบอส |
 
 ปืนใหม่มีกระสุนเต็มแมกกาซีน ใช้กระสุนสำรองร่วมกัน สลับปืนที่ซื้อแล้วได้ฟรี อัปเกรดมีผลกับทุกกระบอก เงินและปืนจะรีเซ็ตเมื่อเริ่มเล่นรอบใหม่
 
@@ -54,7 +58,24 @@ npm run check
 npm test
 ```
 
-`dist/` เป็นเว็บ static พร้อมเผยแพร่: `engine.mjs` ดูแล simulation, `game.mjs` วาด Canvas และเชื่อม UI, `style.css` จัดหน้าจอ ภาพทั้งหมดวาดด้วย Canvas เสียงบันทึกและเสียงสังเคราะห์เล่นผ่าน Web Audio ฟอนต์โหลดจาก Google Fonts และมีฟอนต์สำรองในเครื่อง
+`dist/` เป็นทั้งซอร์สที่แก้ไขโดยตรงและเว็บ static พร้อมเผยแพร่ ไม่ต้อง build: `engine.mjs` ดูแล simulation, `game.mjs` วาด Canvas และเชื่อม UI, `style.css` จัดหน้าจอ ภาพทั้งหมดวาดด้วย Canvas เสียงบันทึกและเสียงสังเคราะห์เล่นผ่าน Web Audio ฟอนต์โหลดจาก Google Fonts และมีฟอนต์สำรองในเครื่อง
+
+## โครงสร้างโปรเจกต์
+
+| ตำแหน่ง | หน้าที่ |
+| --- | --- |
+| `dist/engine.mjs` | จำลองเกม การต่อสู้ สมดุลและการชน |
+| `dist/game.mjs` | วงรอบเกม วาด Canvas และเชื่อม DOM |
+| `dist/view.mjs`, `dist/input.mjs` | ตัวช่วยแสดงผลและการควบคุม |
+| `dist/scenes.mjs`, `dist/zombie-art.mjs` | ฉากและภาพซอมบี้ |
+| `dist/audio.mjs`, `dist/audio/` | ระบบเสียง ไฟล์ที่ใช้จริง และ [เครดิตเสียง](dist/audio/CREDITS.md) |
+| `dist/index.html`, `dist/style.css` | หน้าจอและรูปแบบ UI |
+| `tests/` | เทสต์ด้วย Node.js test runner |
+| `server.mjs`, `scripts/` | เซิร์ฟเวอร์ในเครื่อง ซิงก์เวอร์ชัน และเครื่องมือเตรียมเสียง |
+| `audio-source/` | เสียงต้นฉบับ ไม่ถูกเสิร์ฟหรือ deploy |
+| `.github/workflows/pages.yml` | ตรวจและเผยแพร่ GitHub Pages |
+
+อ่าน [AGENTS.md](AGENTS.md) ก่อนแก้ไขโปรเจกต์ งานเอกสารล้วนไม่ต้องเพิ่มเวอร์ชัน งานแก้โค้ดต้องอัปเดตเวอร์ชันและ changelog ทั้งสองไฟล์ตามขั้นตอนด้านล่าง
 
 การตั้งค่า Sites อยู่ใน `.openai/hosting.json` ใช้ source workflow ของ Sites เพื่อ commit, push และบรรจุไฟล์ก่อนเผยแพร่
 
@@ -118,8 +139,9 @@ refreshes the label without incrementing. `npm run check` rejects a stale label;
 the version.
 
 To prepare a release, run `npm run version:patch` first, then add the new
-version's player-facing notes at the top of `dist/changelog.mjs` and run
-`npm test`. Tests fail until the newest notes match `package.json`, so CI does
+version's player-facing notes at the top of both `CHANGELOG.md` and
+`dist/changelog.mjs`, using the same version and Asia/Bangkok release date.
+Run `npm run check` and `npm test` before committing. Tests fail until the newest notes match `package.json`, so CI does
 not deploy a version without release notes.
 
 Runtime audio names match their purpose: `weapon-m19-sidearm.mp3`,
@@ -238,9 +260,9 @@ on both desktop and touch controls.
 The emergency knife and equipped melee attacks share attack priority: a swing
 blocks the other attack until its recovery ends.
 
-## Mobile interface 1.0.14
+## Mobile interface
 
-Touch controls separate pause from the combat cluster and respect display safe
-areas. Sprint and reload use Thai labels. Wave-break cards keep their action
+The pause button is in the top toolbar, including fullscreen mode. Touch
+controls respect display safe areas. Sprint and reload use Thai labels. Wave-break cards keep their action
 labels visible on phones, and the armory return action spans the dialog width.
 Short landscape screens give the arena the space below the toolbar.
