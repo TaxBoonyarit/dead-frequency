@@ -18,7 +18,7 @@ test('boss money, random supplies and guaranteed ammo occupy separate nearby spo
   const g = running(), e = {x:640,y:410,hp:1,r:25,type:'boss',reward:60};
   g.damageEnemy(e, 1); g.damageEnemy(e, 1);
   assert.equal(g.drops.length, 3); separated(g);
-  assert.deepEqual(g.drops.map(d => [d.type,d.amount,d.life]), [['credits',18,22],['ammo',undefined,22],['ammo',undefined,30]]);
+  assert.deepEqual(g.drops.map(d => [d.type,d.amount,d.life]), [['credits',72,22],['ammo',undefined,22],['ammo',undefined,30]]);
   assert.ok(g.drops.every(d => Math.hypot(d.x - e.x, d.y - e.y) <= 56 + 1e-6));
   assert.equal(g.kills, 1); assert.equal(g.score, 600);
 });
@@ -30,7 +30,7 @@ test('crowded kills retain every drop and leave all items individually collectib
   for (const d of [...g.drops].filter(d => d.type === 'credits')) {
     g.player.x = d.x; g.player.y = d.y; g.update(.01);
   }
-  assert.equal(g.credits, 90); assert.equal(g.drops.some(d => d.type === 'credits'), false);
+  assert.equal(g.credits, 360); assert.equal(g.drops.some(d => d.type === 'credits'), false);
 });
 
 test('items spread inside arena edges and around walls without dropping inside cover', () => {

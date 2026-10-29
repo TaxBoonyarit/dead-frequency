@@ -30,7 +30,7 @@ test('melee cancels reload without spending ammo, blocks shooting/reload and fre
 });
 test('melee kills award rewards once and last boss death clears hazards and finishes wave', () => {
  const g=running();g.random=()=>.29;g.wave=10;g.remaining=0;const e=enemy(g,30,0,20,'boss');e.reward=60;g.enemies=[e];g.hazards=[{x:0,y:0,r:2,life:10,damage:1}];g.attackMelee();tick(g,.15);
- assert.equal(g.kills,1);assert.equal(g.credits,72);assert.equal(g.hazards.length,0);assert.equal(g.enemies.length,0);
+ assert.equal(g.kills,1);assert.equal(g.credits,288);assert.equal(g.hazards.length,0);assert.equal(g.enemies.length,0);
  const ammo=g.drops.find(d=>d.type==='ammo');g.player.x=ammo.x;g.player.y=ammo.y;g.update(.01);assert.ok(g.events.some(e=>e.type==='pickup' && e.pickup==='ammo'));
  tick(g,3.2);assert.equal(g.state,'won');assert.equal(g.kills,1);
 });

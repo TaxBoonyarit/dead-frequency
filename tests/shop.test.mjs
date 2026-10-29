@@ -15,9 +15,9 @@ test('early kills require saving before an SMG purchase equips it', () => {
   g.random = () => .29;
   g.enemies = Array.from({ length: 9 }, () => target(g));
   while (g.state === 'playing') g.update(.05, { fire: true });
-  assert.equal(g.state, 'upgrade'); assert.equal(g.credits, 27); assert.equal(g.score, 900);
+  assert.equal(g.state, 'upgrade'); assert.equal(g.credits, 108); assert.equal(g.score, 900);
   assert.equal(g.buyWeapon('smg'), false);
-  assert.equal(g.credits, 27);
+  assert.equal(g.credits, 108);
   g.credits = 220;
   assert.equal(g.buyWeapon('smg'), true);
   assert.equal(g.credits, 0); assert.equal(g.weaponId, 'smg'); assert.equal(g.gun.mag, 30); assert.equal(g.gun.ammo, 30);
@@ -63,14 +63,14 @@ test('shotguns spread six pellets while using one shell and rewarding a kill onc
   g.player.angle = 0; g.enemies = [target(g)];
   g.shoot(); assert.equal(g.bullets.length, 6); assert.equal(g.gun.ammo, 5);
   assert.ok(g.bullets[0].vy < 0); assert.ok(g.bullets[5].vy > 0);
-  g.update(.01); assert.equal(g.kills, 1); assert.equal(g.credits, 3); assert.equal(g.score, 100);
+  g.update(.01); assert.equal(g.kills, 1); assert.equal(g.credits, 12); assert.equal(g.score, 100);
 });
 
 test('zombie money starts small and increases each wave, while scores stay unchanged', () => {
   for (const [type, rewards, score] of [
-    ['walker', [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 100],
-    ['runner', [5, 6, 8, 9, 11, 12, 14, 15, 17, 18], 150],
-    ['brute', [9, 12, 15, 18, 21, 24, 27, 30, 33, 36], 300],
+    ['walker', [12, 16, 20, 24, 28, 32, 36, 40, 44, 48], 100],
+    ['runner', [20, 24, 32, 36, 44, 48, 56, 60, 68, 72], 150],
+    ['brute', [36, 48, 60, 72, 84, 96, 108, 120, 132, 144], 300],
   ]) {
     rewards.forEach((amount, index) => {
       const g = new Game(() => .5); g.start(); g.wave = index + 1; g.obstacles = [];

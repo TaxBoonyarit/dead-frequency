@@ -16,7 +16,7 @@ test('every wave ends with exactly one correctly scaled boss and waits for its d
     g.random = () => .29;
     g.update(.05, { fire: true });
     assert.equal(g.kills, 1); assert.equal(g.credits, 0);
-    const amount = Math.round(BOSSES[wave - 1].reward * (wave + 2) / 10);
+    const amount = [72, 120, 180, 252, 336, 432, 540, 660, 792, 936][wave - 1];
     assert.equal(g.drops.find(d => d.type === 'credits').amount, amount);
     assert.equal(g.events.find(e => e.type === 'bossDown').reward, amount);
     g.player.x = b.x; g.player.y = b.y; g.update(.01); assert.equal(g.credits, amount);

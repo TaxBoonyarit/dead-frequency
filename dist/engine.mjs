@@ -442,7 +442,7 @@ export class Game {
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
           if (e.hp <= 0) {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
-            const credits = e.special ? 100 + this.wave * 20 : this.random() < .3 ? Math.round(reward * (this.wave + 2) / 10) : 0;
+            const credits = e.special ? 100 + this.wave * 20 : this.random() < .3 ? Math.round(reward * (this.wave + 2) / 10) * 4 : 0;
             this.kills++; this.score += reward * 10;
             if (credits > 0) this.addDrop({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });

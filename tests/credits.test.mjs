@@ -12,7 +12,7 @@ function money(g, x = g.player.x, life = 22) {
 }
 
 test('all zombie types roll a 30% money drop chance once per kill, including bosses', () => {
-  for (const [type, amount, score] of [['walker', 3, 100], ['runner', 5, 150], ['brute', 9, 300], ['boss', 18, 600]]) {
+  for (const [type, amount, score] of [['walker', 12, 100], ['runner', 20, 150], ['brute', 36, 300], ['boss', 72, 600]]) {
     for (const roll of [0, .299999, .3, .999999]) {
       const g = running(); let draws = 0;
       g.random = () => { draws++; return roll; };
