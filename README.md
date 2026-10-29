@@ -24,6 +24,8 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 
 ## ควบคุม
 
+หน้าเตรียมภารกิจให้เลือก SCOUT (คล่องตัว) หรือ GUARD (ทนทาน) แล้วเลือกความยากก่อนกด “เริ่มภารกิจ” ปุ่ม “ปุ่มบนจอ” ใช้สลับคำแนะนำและชุดควบคุมมือถือ คะแนนสูงสุดแสดงเหนือชุดตัวเลือก
+
 - WASD / ปุ่มลูกศร: เดิน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง, F: ใช้อาวุธประชิด, E: เปิดกล่อง Airdrop เมื่ออยู่ใกล้
@@ -193,7 +195,7 @@ and restore accuracy.
 
 ## Touchscreen controls
 
-Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “สัมผัส” toolbar button toggles them on any
+Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “ปุ่มบนจอ” toolbar button toggles them on any
 device. The left stick only moves the survivor. Hold กดยิง to fire immediately
 in the last manually aimed direction; no drag is required to start shooting.
 Move the firing finger relative to its initial touch to change aim independently

@@ -17,7 +17,7 @@ let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, 
 let previous = performance.now(), lastState = '', toastTimer, best = 0, lastHud = 0;
 let soundEnabled = false, audio = null, soundscape = null, pausedForDialog = false, pausedForShop = false, previewRequest = 0, shopFilter = 'all', shopCategory = 'guns';
 try { best = Number(localStorage.getItem('dead-frequency-best') || 0) || 0; } catch {}
-$('best').textContent = String(best).padStart(5, '0');
+$('best').textContent = $('menu-best').textContent = String(best).padStart(5, '0');
 for (let i = 0; i < 10; i++) $('progress-segments').append(document.createElement('i'));
 
 // The city is painted once; moving characters and light are drawn each frame.
@@ -300,13 +300,13 @@ function tone(...args) { soundscape?.tone(...args); }
 function toast(text) { $('toast').textContent = text; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 2000); }
 function storeBest() {
   if (game.score > best) { best = game.score; try { localStorage.setItem('dead-frequency-best', String(best)); } catch {} }
-  $('best').textContent = String(best).padStart(5, '0');
+  $('best').textContent = $('menu-best').textContent = String(best).padStart(5, '0');
 }
 function timeText(seconds) { const t = Math.floor(seconds); return [Math.floor(t / 3600), Math.floor(t / 60) % 60, t % 60].map(n => String(n).padStart(2, '0')).join(':'); }
 function updateHUD() {
   const p = game.player, g = game.gun;
   $('health-meter').setAttribute('aria-valuenow', String(Math.ceil(p.hp))); $('health-meter').setAttribute('aria-valuemax', String(p.maxHp));
-  $('shop-button').textContent = game.state === 'menu' ? 'ร้านปืน' : `ร้าน · ${game.credits} CR`;
+  $('shop-button').textContent = game.state === 'menu' ? 'ร้านอาวุธ' : `ร้าน · ${game.credits} CR`;
   $('health-label').textContent = Math.ceil(p.hp); $('health-bar').style.width = `${p.hp / p.maxHp * 100}%`; $('health-bar').style.background = p.hp < 30 ? '#d98d67' : '';
   $('stamina-bar').style.width = `${p.stamina}%`;
   $('threat-count').textContent = `เหลือ ${game.remaining + game.enemies.length} ตัว${game.remaining === 1 ? ' · บอสกำลังมา' : ''}`;
@@ -318,13 +318,9 @@ function updateHUD() {
   $('melee-status').hidden = !['playing', 'paused'].includes(game.state);
   $('melee-status').textContent = `${MELEE_WEAPONS.find(w => w.id === game.meleeId).name} · ${game.melee.cooldown > 0 ? game.melee.cooldown.toFixed(1) + 's' : 'F / ตี'}${game.buffs.speed > 0 ? ' · เร็ว ' + Math.ceil(game.buffs.speed) + 's' : ''}${game.buffs.shield > 0 ? ' · โล่ ' + Math.ceil(game.buffs.shield) + 's' : ''}`;
   $('airdrop-open').hidden = !game.canOpenAirdrop;
-  const bosses = game.enemies.filter(e => e.type === 'boss'), boss = bosses.find(e => e.special) || bosses[0];
-  $('boss-hud').hidden = !boss || !['playing', 'paused'].includes(game.state);
-  $('boss-hud').classList.toggle('special-boss', !!boss?.special);
-  if (boss) { $('boss-name').textContent = `${boss.special ? 'บอสพิเศษ · ' : ''}${boss.name} · PHASE ${boss.stage} · ${Math.ceil(boss.hp)} / ${Math.ceil(boss.maxHp)}${bosses.length > 1 ? ' · บอสทั้งหมด ' + bosses.length : ''}`; $('boss-health').style.width = `${boss.hp / boss.maxHp * 100}%`; }
   $('credits').textContent = `${game.credits} CR`;
   const shopLink = $('wave-shop-button');
-  if (shopLink) shopLink.textContent = `ร้านปืน · ${game.credits} CR ↗`;
+  if (shopLink) shopLink.textContent = `ร้านอาวุธ · ${game.credits} CR →`;
   $('kills').textContent = String(game.kills).padStart(3, '0'); $('score').textContent = String(game.score).padStart(5, '0');
   $('session-time').textContent = timeText(game.time);
   const completed = game.state === 'won' ? 10 : game.state === 'upgrade' ? game.wave : Math.max(0, game.wave - 1);
@@ -350,7 +346,7 @@ function renderState() {
     c.innerHTML = '<div class="state-eyebrow">TAKE A BREATH.</div><h2 class="state-title" id="state-title">SIGNAL PAUSED.</h2><p class="state-copy">พักได้ แต่อย่าลืมกลับมา</p><button class="primary" id="resume-button">เล่นต่อ <span>↗</span></button><button class="secondary" id="quit-button">หน้าแรก</button>';
     $('resume-button').onclick = () => game.pause(); $('quit-button').onclick = returnMenu;
   } else if (s === 'upgrade') {
-    c.innerHTML = `<div class="state-eyebrow">ระลอก ${game.wave} สำเร็จ</div><h2 class="state-title" id="state-title">เลือกอัปเกรด</h2><p class="state-copy">โบนัสผ่านด่าน +${100 + game.wave * 10} CR<br>เลือด +20 · กระสุน +${AMMO.wave}<br>ซื้ออาวุธก่อน หรือเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป</p><button id="wave-shop-button" class="shop-link">ร้านปืน · ${game.credits} CR ↗</button><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon">${u.icon}</span><strong>${u.title}</strong><em>${u.th}</em><small>${u.detail}</small><span class="select-label">เลือกแล้วเริ่มเวฟ <span>0${i + 1} ↗</span></span></button>`).join('')}</div>`;
+    c.innerHTML = `<div class="upgrade-heading"><div><div class="state-eyebrow">ระลอก ${game.wave} สำเร็จ</div><h2 class="state-title" id="state-title">เลือกอัปเกรด</h2></div><button id="wave-shop-button" class="shop-link">ร้านอาวุธ · ${game.credits} CR →</button></div><p class="state-copy upgrade-summary">โบนัส +${100 + game.wave * 10} CR · เลือด +20 · กระสุน +${AMMO.wave}<span>ซื้ออาวุธก่อน หรือเลือกอัปเกรดเพื่อเริ่มระลอกถัดไป</span></p><div class="upgrade-grid">${game.choices.map((u, i) => `<button class="upgrade-card" data-upgrade="${u.id}"><span class="upgrade-icon" aria-hidden="true">${u.icon}</span><strong>${u.th}</strong><em>${u.title}</em><small>${u.detail}</small><span class="select-label">เลือกแล้วเริ่มระลอก <span>0${i + 1} →</span></span></button>`).join('')}</div>`;
     $('wave-shop-button').onclick = openShop;
     c.querySelectorAll('[data-upgrade]').forEach(b => b.onclick = () => { game.upgrade(b.dataset.upgrade); tone(550, .15, 'sine', .04, 900); });
   } else if (s === 'dead' || s === 'won') {
@@ -387,19 +383,19 @@ function renderShop() {
   document.querySelectorAll('[data-shop-filter]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.shopFilter === shopFilter)));
   document.querySelectorAll('[data-shop-category]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.shopCategory === shopCategory)));
   const visibleWeapons = WEAPONS.filter(w => shopFilter === 'owned' ? game.ownedWeapons.has(w.id) : shopFilter === 'affordable' ? !game.ownedWeapons.has(w.id) && game.credits >= w.price : true);
-  $('shop-description').textContent = canTrade ? 'ซื้อหรือสลับอาวุธ แล้วค่อยอัปเกรด' : 'ดูอาวุธได้ · ซื้อและสลับหลังจบเวฟ';
+  $('shop-description').textContent = canTrade ? 'ซื้อหรือสลับอาวุธ แล้วค่อยอัปเกรด' : 'ดูอาวุธได้ · ซื้อและสลับหลังจบระลอก';
   $('armory-done').firstChild.textContent = canTrade ? 'อัปเกรดต่อ ' : game.state === 'menu' ? 'หน้าแรก ' : 'กลับเกม ';
   $('weapon-grid').innerHTML = visibleWeapons.map(w => {
     const stats = game.weaponStats(w.id), owned = game.ownedWeapons.has(w.id), equipped = game.weaponId === w.id;
     const disabled = !canTrade || equipped || (!owned && game.credits < w.price);
-    const action = equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? `ซื้อหลังจบเวฟ · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
+    const action = equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? `ซื้อหลังจบระลอก · ${w.price} CR` : game.credits < w.price ? `ขาดอีก ${w.price - game.credits} CR` : `ซื้อและใช้ · ${w.price} CR`;
     return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>${w.type}</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : `${w.price} CR`}</b></div>${weaponArt(w.id)}<div class="weapon-range">${w.range < .5 ? 'ระยะใกล้' : w.range > 1.2 ? 'ระยะไกล' : 'ระยะกลาง'}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${Math.round(stats.damage)}${stats.pellets > 1 ? ` × ${stats.pellets}` : ''}</dd></div><div><dt>MAG</dt><dd>${stats.mag}</dd></div><div><dt>นัด/วินาที</dt><dd>${(1 / stats.interval).toFixed(1)}</dd></div><div><dt>รีโหลด</dt><dd>${stats.reloadTime.toFixed(1)}s</dd></div></dl><button class="weapon-buy" data-weapon="${w.id}" ${disabled ? 'disabled' : ''}>${action}</button><details class="weapon-audio"><summary>ลองเสียง</summary><div class="weapon-sound-actions"><button class="sound-preview" data-preview="${w.id}" aria-label="ลองเสียง ${w.name}" title="เสียงต้นแบบ ${GUN_RECORDINGS[w.id]}">▶ เสียงยิง</button><button class="sound-preview reload-preview" data-reload-preview="${w.id}" aria-label="ลองเสียงรีโหลด ${w.name}">↻ รีโหลด</button></div></details></article>`;
   }).join('') || '<p class="shop-empty">เครดิตไม่พอ · ฆ่าซอมบี้เพื่อเก็บเงิน หรือดูปืนทั้งหมด</p>';
   if (shopCategory === 'melee') {
     const visible = MELEE_WEAPONS.filter(w => shopFilter === 'owned' ? game.ownedMelee.has(w.id) : shopFilter === 'affordable' ? !game.ownedMelee.has(w.id) && game.credits >= w.price : true);
     $('weapon-grid').innerHTML = visible.map(w => {
       const owned = game.ownedMelee.has(w.id), equipped = game.meleeId === w.id;
-      return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>ประชิด</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : w.price + ' CR'}</b></div><div class="melee-art" aria-hidden="true">${weaponArt(w.id)}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${w.damage}</dd></div><div><dt>ระยะ</dt><dd>${w.range}</dd></div><div><dt>ตีซ้ำทุก</dt><dd>${w.interval.toFixed(2)}s</dd></div><div><dt>มุมกวาด</dt><dd>${w.arc}°</dd></div></dl><button data-melee="${w.id}" ${!canTrade || equipped || !owned && game.credits < w.price ? 'disabled' : ''}>${equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? 'ซื้อหลังจบเวฟ' : game.credits < w.price ? 'เครดิตไม่พอ' : 'ซื้อและใช้ · ' + w.price + ' CR'}</button></article>`;
+      return `<article class="weapon-card ${equipped ? 'equipped' : ''}"><div class="weapon-top"><span>ประชิด</span><b>${owned ? equipped ? 'EQUIPPED' : 'OWNED' : w.price + ' CR'}</b></div><div class="melee-art" aria-hidden="true">${weaponArt(w.id)}</div><h3>${w.name}</h3><p>${w.description}</p><dl><div><dt>DMG</dt><dd>${w.damage}</dd></div><div><dt>ระยะ</dt><dd>${w.range}</dd></div><div><dt>ตีซ้ำทุก</dt><dd>${w.interval.toFixed(2)}s</dd></div><div><dt>มุมกวาด</dt><dd>${w.arc}°</dd></div></dl><button data-melee="${w.id}" ${!canTrade || equipped || !owned && game.credits < w.price ? 'disabled' : ''}>${equipped ? 'ใช้อยู่' : owned ? 'สลับใช้' : !canTrade ? 'ซื้อหลังจบระลอก' : game.credits < w.price ? 'เครดิตไม่พอ' : 'ซื้อและใช้ · ' + w.price + ' CR'}</button></article>`;
     }).join('') || '<p class="shop-empty">ไม่มีอาวุธตรงกับตัวกรองนี้</p>';
     $('weapon-grid').querySelectorAll('[data-melee]').forEach(b => b.onclick = () => {
       const id = b.dataset.melee, owned = game.ownedMelee.has(id);
@@ -451,7 +447,10 @@ $('armory').addEventListener('close', () => {
   pausedForShop = false;
 });
 const characterOptions = $('character-options');
-characterOptions.innerHTML = CHARACTERS.map(c => `<button type="button" data-character="${c.id}" aria-pressed="${game.characterId === c.id}" style="--character-color:${c.color}"><span class="character-symbol" aria-hidden="true">${c.id === 'female' ? '♀' : '♂'}</span><strong>${c.name} <small>${c.role}</small></strong><span class="character-stats"><span aria-label="เลือด ${c.hp} HP" title="เลือด"><span aria-hidden="true">♥</span> ${c.hp}</span><span aria-label="ความเร็ว ${c.speed}" title="ความเร็ว"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 9-13h-7z"/></svg> ${c.speed}</span></span></button>`).join('');
+characterOptions.innerHTML = CHARACTERS.map(c => `<button type="button" data-character="${c.id}" aria-pressed="${game.characterId === c.id}" style="--character-color:${c.color}">
+  <svg class="character-portrait" viewBox="0 0 88 104" aria-hidden="true"><path class="portrait-backdrop" d="M0 0h88v104H0z"/><path fill="#0c1310" d="M10 104V81q0-17 24-22h20q24 5 24 22v23z"/><path fill="${c.color}" d="M15 104V82q0-12 22-17h14q22 5 22 17v22z"/><path fill="#c2ad88" d="M36 48h16v22l-8 9-8-9z"/><path fill="#ddc6a0" d="M28 29q0-20 16-20t16 20v12q0 20-16 20T28 41z"/>${c.id === 'female' ? '<path fill="#302920" d="M25 39V25Q25 5 44 5q20 0 20 23v22h-6V28q-14 1-21-9-2 14-12 20z"/><path fill="#302920" d="M25 26q-16 10-11 35l9-5q-5-16 6-21z"/>' : '<path fill="#364b35" d="M23 32v-7Q24 4 44 4t21 21v7z"/><path fill="#8a9b61" d="M23 27h42v8H23z"/><path fill="#253127" d="M28 73h32l7 31H21z"/><path fill="#556546" d="M34 79h20v7H34zm0 12h20v7H34z"/>'}<path fill="none" stroke="#302920" stroke-width="2" d="M34 36h5m10 0h5"/><path fill="none" stroke="#8c7159" stroke-width="2" d="M39 49h10"/><path fill="#26392c" d="m27 70 8-3 5 37H28zm27-3 8 3-1 34H49z"/></svg>
+  <span class="character-copy"><strong>${c.role}</strong><span class="character-trait">${c.id === 'female' ? 'คล่องตัว' : 'ทนทาน'}</span><small>${c.name}</small></span>
+  <span class="selection-mark" aria-hidden="true">✓</span><span class="character-stats"><span>เลือด <b>${c.hp}</b></span><span>ความเร็ว <b>${c.speed}</b></span></span></button>`).join('');
 characterOptions.querySelectorAll('[data-character]').forEach(button => {
   button.onclick = () => {
     if (!game.selectCharacter(button.dataset.character)) return;
@@ -474,7 +473,7 @@ $('quit-cancel').onclick = () => $('quit-confirm').close();
 $('quit-confirm-done').onclick = () => { $('quit-confirm').close(); resetToMenu(); };
 $('start-button').onclick = startGame;
 $('pause-button').onclick = () => { game.pause(); renderState(); };
-$('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'; $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
+$('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'; $('sound-button').setAttribute('aria-pressed', String(soundEnabled)); $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
 bindWakeLock($('wake-lock-button'), { document, navigator, notify: toast });
 function syncFullscreen() {
   const expanded = !!document.fullscreenElement || document.body.classList.contains('game-expanded');
@@ -551,6 +550,7 @@ function updateTouchMode() {
   releaseInput(); pointer = null;
   document.body.classList.toggle('touch-mode', touchMode);
   $('touch-mode-button').setAttribute('aria-pressed', String(touchMode));
+  $('touch-mode-button').textContent = touchMode ? 'ปุ่มบนจอ: เปิด' : 'ปุ่มบนจอ: ปิด';
   resize();
   canvas.style.cursor = game.state === 'playing' && !touchMode ? 'none' : '';
 }

@@ -71,6 +71,6 @@ test('wave break focuses its named region before the player chooses an upgrade',
   runInNewContext(source.slice(source.indexOf('function renderState()'), source.indexOf('function weaponArt(')), context);
   context.renderState();
   assert.equal(focused, true); assert.equal(attributes.get('aria-labelledby'), 'state-title');
-  assert.match(region.innerHTML, /เลือกแล้วเริ่มเวฟ/);
+  assert.match(region.innerHTML, /เลือกแล้วเริ่มระลอก/);
   assert.equal(game.state, 'upgrade');
 });

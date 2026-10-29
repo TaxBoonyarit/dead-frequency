@@ -2,7 +2,7 @@ export function bindWakeLock(button, { document, navigator, notify }) {
   let enabled = false, lock = null, pending = false;
   function update() {
     button.setAttribute('aria-pressed', String(enabled));
-    button.textContent = lock && !lock.released ? 'กันจอดับ ✓' : enabled ? 'กันจอดับ รอ' : 'กันจอดับ';
+    button.textContent = lock && !lock.released ? 'กันจอดับ: เปิด' : enabled ? 'กันจอดับ: รอ' : 'กันจอดับ: ปิด';
     button.title = enabled ? 'ปิดการกันจอดับ' : 'เปิดหน้าจอค้างขณะอยู่ในเกม';
     button.disabled = pending;
   }
