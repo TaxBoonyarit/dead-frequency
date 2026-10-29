@@ -9,26 +9,75 @@ function running(wave = 2) {
   return g;
 }
 function tick(g, seconds) { for (let i = 0; i < Math.ceil(seconds / .05); i++) g.update(.05); }
-function lootRoll(id) {
+function lootRoll(id, seen = new Set()) {
+  const pool = AIRDROP_LOOT.filter(item => !seen.has(item.id));
+  const total = pool.reduce((sum, item) => sum + item.weight, 0);
   let weight = 0;
-  for (const item of AIRDROP_LOOT) { if (item.id === id) return (weight + item.weight / 2) / 1000; weight += item.weight; }
+  for (const item of pool) { if (item.id === id) return (weight + item.weight / 2) / total; weight += item.weight; }
   throw new Error(id);
 }
 function crate(g, id) {
   g.airdrop = { x: g.player.x + 40, y: g.player.y, state: 'landed', life: 30 };
-  g.random = () => lootRoll(id);
+  const roll = lootRoll(id, g.airdropLootSeen);
+  g.random = () => roll;
 }
 function rng(seed) { return () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296); }
 
-test('all 1000 loot slots match the agreed odds, including 68% enemies and 0.1% jackpot', () => {
+test('all 1000 loot slots match the agreed odds, including 25% enemies and 0.1% jackpot', () => {
   const counts = new Map();
   for (let i = 0; i < 1000; i++) { const id = rollAirdrop(() => (i + .5) / 1000).id; counts.set(id, (counts.get(id) || 0) + 1); }
   assert.equal(AIRDROP_LOOT.reduce((sum, item) => sum + item.weight, 0), 1000);
   assert.equal(counts.size, 13);
+  assert.deepEqual(AIRDROP_LOOT.map(item => item.weight), [150, 70, 30, 300, 200, 150, 60, 15, 10, 6, 5, 3, 1]);
   for (const item of AIRDROP_LOOT) assert.equal(counts.get(item.id), item.weight);
-  assert.equal(counts.get('zombies') + counts.get('horde') + counts.get('specialBoss'), 680);
+  assert.equal(counts.get('zombies') + counts.get('horde') + counts.get('specialBoss'), 250);
   assert.equal(counts.get('jackpot'), 1);
   assert.equal(rollAirdrop(() => 0).id, 'zombies'); assert.equal(rollAirdrop(() => .999999).id, 'jackpot');
+});
+
+test('seen results are excluded and the remaining weights retain their proportions', () => {
+  const seen = new Set(['zombies', 'ammo']);
+  const pool = AIRDROP_LOOT.filter(item => !seen.has(item.id));
+  const total = pool.reduce((sum, item) => sum + item.weight, 0), counts = new Map();
+  for (let i = 0; i < total; i++) {
+    const result = rollAirdrop(() => (i + .5) / total, seen);
+    assert.equal(seen.has(result.id), false);
+    counts.set(result.id, (counts.get(result.id) || 0) + 1);
+  }
+  for (const item of pool) assert.equal(counts.get(item.id), item.weight);
+  assert.deepEqual([...seen], ['zombies', 'ammo']);
+  assert.equal(rollAirdrop(() => 0, new Set(AIRDROP_LOOT.map(item => item.id))), undefined);
+});
+
+test('nine opened crates never repeat across waves, even with a constant random source', () => {
+  const g = running(), results = [];
+  g.random = () => 0;
+  for (let wave = 2; wave <= 10; wave++) {
+    assert.equal(g.wave, wave);
+    g.airdrop = { x: g.player.x + 40, y: g.player.y, state: 'landed', life: 30 };
+    assert.equal(g.openAirdrop(), true);
+    results.push(g.events.findLast(event => event.type === 'airdropOpened').kind);
+    assert.equal(g.airdropLootSeen.size, results.length);
+    if (wave < 10) g.nextWave();
+  }
+  assert.equal(new Set(results).size, 9);
+  assert.deepEqual(results, AIRDROP_LOOT.slice(0, 9).map(item => item.id));
+  g.start(); assert.equal(g.airdropLootSeen.size, 0);
+  g.wave = 2; g.random = () => 0;
+  g.airdrop = { x: g.player.x + 40, y: g.player.y, state: 'landed', life: 30 };
+  assert.equal(g.openAirdrop(), true);
+  assert.equal(g.events.findLast(event => event.type === 'airdropOpened').kind, results[0]);
+  g.reset(); assert.equal(g.airdropLootSeen.size, 0);
+});
+
+test('unopened and exhausted crates do not consume results', () => {
+  const g = running(); g.airdropClock = null;
+  g.airdrop = { x: g.player.x + 40, y: g.player.y, state: 'landed', life: .01 };
+  g.update(.05); assert.equal(g.airdrop, null); assert.equal(g.airdropLootSeen.size, 0);
+  g.airdropLootSeen = new Set(AIRDROP_LOOT.map(item => item.id));
+  g.airdrop = { x: g.player.x + 40, y: g.player.y, state: 'landed', life: 30 };
+  assert.equal(g.openAirdrop(), false); assert.equal(g.airdrop.state, 'landed');
+  assert.equal(g.events.some(event => event.type === 'airdropOpened'), false);
 });
 
 test('wave one has no crate and later waves independently have a 40% chance', () => {
@@ -60,7 +109,9 @@ test('opening is explicit, near the crate, unblocked, once only, and respects pa
   g.obstacles = [{ x:g.player.x + 15, y:g.player.y - 20, w:5, h:40 }]; assert.equal(g.openAirdrop(), false);
   g.obstacles = []; g.pause(); assert.equal(g.openAirdrop(), false); g.pause();
   g.melee.cooldown = 1; assert.equal(g.openAirdrop(), false); g.melee.cooldown = 0;
+  assert.equal(g.airdropLootSeen.size, 0);
   assert.equal(g.openAirdrop(), true); assert.equal(g.gun.reserve, reserve + 24);
+  assert.deepEqual([...g.airdropLootSeen], ['ammo']);
   assert.equal(g.openAirdrop(), false); assert.equal(g.gun.reserve, reserve + 24);
   assert.equal(controlKey({ code:'KeyE', key:'ำ' }), 'e');
 });
@@ -126,18 +177,18 @@ test('killing one of two bosses preserves the other boss and its hazards', () =>
 
 test('ammo, health and money rewards respect caps and full supplies convert to small credit rewards', () => {
   const g = running(3); g.gun.reserve = 115; crate(g, 'ammo'); g.openAirdrop(); assert.equal(g.gun.reserve, AMMO.maxReserve);
-  crate(g, 'ammo'); g.openAirdrop(); assert.equal(g.credits, 8);
+  g.grantSupply('ammo', g.player); assert.equal(g.credits, 8);
   g.player.hp = 1; crate(g, 'health'); g.openAirdrop(); assert.equal(g.player.hp, 41);
-  g.player.hp = g.player.maxHp; crate(g, 'health'); g.openAirdrop(); assert.equal(g.credits, 16);
+  g.player.hp = g.player.maxHp; g.grantSupply('health', g.player); assert.equal(g.credits, 16);
   crate(g, 'credits'); g.openAirdrop(); assert.ok(g.credits >= 35 && g.credits < 54);
 });
 
 test('stim and shield extend duration without stacking strength, expire, and do not damage the survivor', () => {
   const g = running(), speed = g.player.speed; g.player.stamina = 0;
-  crate(g, 'stim'); g.openAirdrop(); crate(g, 'stim'); g.openAirdrop();
+  crate(g, 'stim'); g.openAirdrop(); g.grantSupply('stim', g.player);
   assert.equal(g.buffs.speed, 16); assert.equal(g.player.stamina, 100);
   const x = g.player.x; g.update(.05, {x:1}); assert.equal(g.player.x, x + speed * 1.25 * .05);
-  crate(g, 'shield'); g.openAirdrop(); crate(g, 'shield'); g.openAirdrop(); assert.equal(g.buffs.shield, 6);
+  crate(g, 'shield'); g.openAirdrop(); g.grantSupply('shield', g.player); assert.equal(g.buffs.shield, 6);
   g.hurtPlayer(1000); assert.equal(g.player.hp, g.player.maxHp);
   tick(g, 16.1); assert.equal(g.buffs.speed, 0); assert.equal(g.buffs.shield, 0); assert.equal(g.player.speed, speed);
   g.hurtPlayer(10); assert.ok(g.player.hp < g.player.maxHp);
@@ -155,9 +206,9 @@ test('weapon rewards equip unlocked weapons without losing old ammo, and duplica
   const g = running(2); g.gun.ammo = 7; g.gun.reserve = 12; g.gun.reload = 1; g.autoReloadPending = true;
   crate(g, 'gun'); g.openAirdrop(); assert.equal(g.weaponId, 'smg'); assert.equal(g.gun.ammo, 30);
   assert.equal(g.ownedWeapons.get('pistol'), 7); assert.equal(g.gun.reserve, 12); assert.equal(g.gun.reload, 0); assert.equal(g.autoReloadPending, false);
-  crate(g, 'gun'); g.openAirdrop(); assert.equal(g.credits, 7); assert.equal(g.ownedWeapons.size, 2);
+  g.grantSupply('gun', g.player); assert.equal(g.credits, 7); assert.equal(g.ownedWeapons.size, 2);
   crate(g, 'melee'); g.openAirdrop(); assert.equal(g.meleeId, 'crowbar'); assert.ok(g.ownedMelee.has('crowbar'));
-  crate(g, 'melee'); g.openAirdrop(); assert.equal(g.credits, 14);
+  g.grantSupply('melee', g.player); assert.equal(g.credits, 14);
   assert.equal(g.equipWeapon('pistol'), false); assert.equal(g.buyWeapon('rifle'), false);
   const h = running(8); crate(h, 'jackpot'); h.openAirdrop(); assert.equal(h.weaponId, 'sniper');
   assert.equal(h.gun.ammo, 5); assert.equal(h.gun.reserve, AMMO.start + 24); assert.equal(h.credits, 130);

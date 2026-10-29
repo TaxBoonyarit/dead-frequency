@@ -6,15 +6,17 @@ export const CHARACTERS = [
 export const W = 1280, H = 800;
 export const AMMO = { start: 54, pickup: 12, wave: 18, maxReserve: 120 };
 export const AIRDROP_LOOT = [
-  ['zombies', 'ซอมบี้', 400], ['horde', 'ฝูงซอมบี้', 200], ['specialBoss', 'บอสพิเศษ', 80],
-  ['ammo', 'กระสุน +24', 120], ['health', 'ชุดรักษา +40', 80], ['credits', 'ถุงเงิน', 50],
-  ['stim', 'ยากระตุ้น 8 วินาที', 30], ['melee', 'อาวุธประชิด', 15], ['gun', 'ปืนสุ่ม', 10],
+  ['zombies', 'ซอมบี้', 150], ['horde', 'ฝูงซอมบี้', 70], ['specialBoss', 'บอสพิเศษ', 30],
+  ['ammo', 'กระสุน +24', 300], ['health', 'ชุดรักษา +40', 200], ['credits', 'ถุงเงิน', 150],
+  ['stim', 'ยากระตุ้น 8 วินาที', 60], ['melee', 'อาวุธประชิด', 15], ['gun', 'ปืนสุ่ม', 10],
   ['shield', 'โล่ฉุกเฉิน 3 วินาที', 6], ['blast', 'ระเบิดกวาดพื้นที่', 5],
   ['upgrade', 'อัปเกรดถาวร', 3], ['jackpot', 'แจ็กพอต', 1],
 ].map(([id, label, weight]) => ({ id, label, weight }));
-export function rollAirdrop(random = Math.random) {
-  let roll = Math.floor(random() * 1000);
-  return AIRDROP_LOOT.find(item => (roll -= item.weight) < 0);
+export function rollAirdrop(random = Math.random, seen = new Set()) {
+  const pool = AIRDROP_LOOT.filter(item => !seen.has(item.id));
+  const total = pool.reduce((sum, item) => sum + item.weight, 0);
+  let roll = Math.floor(random() * total);
+  return pool.find(item => (roll -= item.weight) < 0);
 }
 export const KNIFE = { range: 65, arc: Math.PI / 2, damage: 40, interval: .45, swingTime: .32 };
 export const WEAPONS = [
@@ -164,6 +166,7 @@ export class Game {
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
     this.choices = []; this.clearClock = null;
     this.airdrop = null; this.airdropClock = null; this.ambush = null; this.clearDelay = 3;
+    this.airdropLootSeen = new Set();
     this.buffs = { speed: 0, shield: 0 };
   }
   selectCharacter(id) {
@@ -285,7 +288,9 @@ export class Game {
   }
   openAirdrop() {
     if (!this.canOpenAirdrop) return false;
-    const d = this.airdrop, loot = rollAirdrop(this.random);
+    const d = this.airdrop, loot = rollAirdrop(this.random, this.airdropLootSeen);
+    if (!loot) return false;
+    this.airdropLootSeen.add(loot.id);
     d.state = 'opened';
     this.emit('airdropOpened', { kind: loot.id, label: loot.label });
     if (['zombies', 'horde', 'specialBoss'].includes(loot.id)) {
