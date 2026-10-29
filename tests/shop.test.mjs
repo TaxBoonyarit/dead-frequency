@@ -15,9 +15,9 @@ test('early kills require saving before an SMG purchase equips it', () => {
   g.random = () => .29;
   g.enemies = Array.from({ length: 9 }, () => target(g));
   while (g.state === 'playing') g.update(.05, { fire: true });
-  assert.equal(g.state, 'upgrade'); assert.equal(g.credits, 108); assert.equal(g.score, 900);
+  assert.equal(g.state, 'upgrade'); assert.equal(g.credits, 218); assert.equal(g.score, 900);
   assert.equal(g.buyWeapon('smg'), false);
-  assert.equal(g.credits, 108);
+  assert.equal(g.credits, 218);
   g.credits = 220;
   assert.equal(g.buyWeapon('smg'), true);
   assert.equal(g.credits, 0); assert.equal(g.weaponId, 'smg'); assert.equal(g.gun.mag, 30); assert.equal(g.gun.ammo, 30);
@@ -78,7 +78,7 @@ test('zombie money starts small and increases each wave, while scores stay uncha
       const e = target(g, type); e.x += 100; g.enemies = [e];
       g.damageEnemy(e, 10); g.damageEnemy(e, 10);
       assert.equal(g.credits, 0); assert.equal(g.kills, 1); assert.equal(g.score, score);
-      assert.deepEqual(g.drops, [{ x: e.x, y: e.y, type: 'credits', amount, life: 22 }]);
+      assert.deepEqual(g.drops, [{ x: e.x, y: e.y, type: 'credits', amount, life: 35 }]);
       g.update(.01); assert.equal(g.credits, 0);
       g.player.x = e.x; g.update(.01); assert.equal(g.credits, amount);
       g.update(.01); assert.equal(g.credits, amount);

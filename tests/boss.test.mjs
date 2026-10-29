@@ -12,7 +12,7 @@ test('every wave ends with exactly one correctly scaled boss and waits for its d
     assert.equal(b.name, BOSSES[wave - 1].name); assert.equal(b.hp, BOSSES[wave - 1].hp);
     assert.equal(blocked(b.x, b.y, b.r), false); assert.equal(g.remaining, 0);
     g.update(.01); assert.equal(g.state, 'playing'); assert.equal(g.enemies.length, 1);
-    g.player.x = b.x; g.player.y = b.y + 50; g.player.angle = -Math.PI / 2; b.hp = 1;
+    g.player.x = b.x; g.player.y = b.y + 60; g.player.angle = -Math.PI / 2; b.hp = 1;
     g.random = () => .29;
     g.update(.05, { fire: true });
     assert.equal(g.kills, 1); assert.equal(g.credits, 0);
