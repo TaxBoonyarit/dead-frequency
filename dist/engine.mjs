@@ -271,6 +271,7 @@ export class Game {
       const x = i < 64 ? origin.x + (this.random() - .5) * spread * 2 : 48 + ((i - 64) % 20) * 62;
       const y = i < 64 ? origin.y + (this.random() - .5) * spread * 2 : 48 + Math.floor((i - 64) / 20) * 46;
       if (blocked(x, y, radius, this.obstacles) || Math.hypot(x - this.player.x, y - this.player.y) < 110) continue;
+      if (this.drops.some(d => d.life > 0 && Math.hypot(x - d.x, y - d.y) < 72)) continue;
       if (this.enemies.some(e => e.hp > 0 && Math.hypot(x - e.x, y - e.y) < radius + e.r + 8)) continue;
       const point = { x, y }, target = approachPoint(point, this.player, radius, this.obstacles);
       if (clearLine(x, y, target.x, target.y, radius, this.obstacles)) return point;
@@ -422,6 +423,20 @@ export class Game {
       }
     }
   }
+  addDrop(drop) {
+    for (let ring = 0; ring <= Math.ceil(Math.hypot(W, H) / 56); ring++) {
+      const count = Math.max(1, ring * 8);
+      for (let i = 0; i < count; i++) {
+        const angle = i * Math.PI * 2 / count;
+        const x = drop.x + Math.cos(angle) * ring * 56, y = drop.y + Math.sin(angle) * ring * 56;
+        if (blocked(x, y, 14, this.obstacles)) continue;
+        if (this.drops.some(d => d.life > 0 && Math.hypot(x - d.x, y - d.y) < 56 - 1e-6)) continue;
+        if (this.airdrop && Math.hypot(x - this.airdrop.x, y - this.airdrop.y) < 72) continue;
+        this.drops.push({ ...drop, x, y }); return true;
+      }
+    }
+    return false;
+  }
   damageEnemy(e, damage, x = e.x, y = e.y) {
     if (e.hp <= 0) return;
     e.hp -= damage; e.hit = .1; this.emit('hit'); this.burst(x, y, '#a0ab64', 6);
@@ -429,15 +444,15 @@ export class Game {
             const reward = e.type === 'boss' ? e.reward : e.type === 'brute' ? 30 : e.type === 'runner' ? 15 : 10;
             const credits = e.special ? 100 + this.wave * 20 : this.random() < .3 ? Math.round(reward * (this.wave + 2) / 10) : 0;
             this.kills++; this.score += reward * 10;
-            if (credits > 0) this.drops.push({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
+            if (credits > 0) this.addDrop({ x: e.x, y: e.y, type: 'credits', amount: credits, life: 22 });
             this.stains.push({ x: e.x, y: e.y, r: e.r + this.random() * 9 });
             if (this.stains.length > 80) this.stains.shift();
             const roll = this.random();
-            if (roll < .22) this.drops.push({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
+            if (roll < .22) this.addDrop({ x: e.x, y: e.y, type: roll < .065 ? 'health' : 'ammo', life: 22 });
             if (e.special && this.remaining === 0 && !this.ambush && !this.enemies.some(other => other.hp > 0)) this.clearDelay = 10;
             if (e.type === 'boss') {
               this.hazards = this.enemies.some(other => other.type === 'boss' && other.hp > 0) ? this.hazards.filter(h => h.owner !== e) : [];
-              this.drops.push({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward: credits });
+              this.addDrop({ x: e.x, y: e.y, type: 'ammo', life: 30 }); this.emit('bossDown', { reward: credits });
             }
             this.emit('kill');
           }
