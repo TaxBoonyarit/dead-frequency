@@ -28,6 +28,35 @@ test('walls absorb bullets before they hit enemies behind them', () => {
   const g = running(); g.player.x = 400; g.player.y = 545; g.player.angle = 0; g.enemies = [enemy(600, 545)];
   g.shoot(); tick(g, .4); assert.equal(g.enemies[0].hp, 65); assert.equal(g.bullets.length, 0);
 });
+test('bullets sweep their remaining range on the last frame without reaching beyond it', () => {
+  for (const dt of [.01, .015, .02, .05]) {
+    const g = running(); g.obstacles = []; g.player.invulnerable = 100;
+    const near = enemy(730, 410), far = enemy(750, 410);
+    g.enemies = [near, far];
+    g.bullets = [{ x: 700, y: 410, vx: 1000, vy: 0, life: .015, damage: 10 }];
+    g.update(dt);
+    if (dt < .015) g.update(dt);
+    assert.equal(near.hp, 55, `Missed final range at dt=${dt}`);
+    assert.equal(far.hp, 65, `Hit beyond range at dt=${dt}`);
+    assert.equal(g.bullets.length, 0);
+
+    const miss = running(); miss.obstacles = [];
+    const beyond = enemy(750, 410); miss.enemies = [beyond];
+    miss.bullets = [{ x: 700, y: 410, vx: 1000, vy: 0, life: .015, damage: 10 }];
+    miss.update(dt);
+    if (dt < .015) miss.update(dt);
+    assert.equal(beyond.hp, 65, `Travelled beyond range at dt=${dt}`);
+    assert.equal(miss.bullets.length, 0);
+  }
+});
+test('walls still absorb a bullet during its final fraction of a frame', () => {
+  const g = running(); g.obstacles = [{ x: 710, y: 390, w: 5, h: 40 }];
+  const target = enemy(730, 410); g.enemies = [target];
+  g.bullets = [{ x: 700, y: 410, vx: 1000, vy: 0, life: .015, damage: 10 }];
+  g.update(.05);
+  assert.equal(target.hp, 65); assert.equal(g.bullets.length, 0);
+  assert.ok(g.particles.length > 0, 'The wall impact should be rendered');
+});
 test('reload transfers only available reserve and cannot shoot during reload', () => {
   const g = running(); g.gun.ammo = 2; g.gun.reserve = 5; g.reload(); g.shoot(); assert.equal(g.gun.ammo, 2);
   tick(g, g.gun.reloadTime + .2); assert.equal(g.gun.ammo, 7); assert.equal(g.gun.reserve, 0); assert.equal(g.gun.reload, 0);

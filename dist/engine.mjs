@@ -90,13 +90,14 @@ function move(body, dx, dy, r, obstacles) {
 }
 function clearLine(x1, y1, x2, y2, radius = 3, obstacles = OBSTACLES) {
   if (blocked(x1, y1, radius, obstacles) || blocked(x2, y2, radius, obstacles)) return false;
+  const dx = x2 - x1, dy = y2 - y1;
   // Sweep the body's full bounds along the segment, including obstacle corners.
   for (const o of obstacles) {
     let enter = 0, leave = 1;
-    for (const [start, delta, low, high] of [
-      [x1, x2 - x1, o.x - radius, o.x + o.w + radius],
-      [y1, y2 - y1, o.y - radius, o.y + o.h + radius],
-    ]) {
+    for (let axis = 0; axis < 2; axis++) {
+      const start = axis === 0 ? x1 : y1, delta = axis === 0 ? dx : dy;
+      const low = (axis === 0 ? o.x : o.y) - radius;
+      const high = axis === 0 ? o.x + o.w + radius : o.y + o.h + radius;
       if (Math.abs(delta) < 1e-9) { if (start <= low || start >= high) { enter = Infinity; break; } }
       else {
         const a = (low - start) / delta, b = (high - start) / delta;
@@ -136,7 +137,7 @@ function approachPoint(from, player, radius, obstacles) {
   if (clearLine(from.x, from.y, radial.x, radial.y, radius, obstacles)) return radial;
   // A large enemy may need to approach a wall-hugging survivor from the side.
   // Seed navigation with every visible point in melee range, not a blocked radial endpoint.
-  let best = radial, cost = Infinity;
+  let best = null, cost = Infinity;
   for (let i = 0; i < 32; i++) {
     const angle = i * Math.PI / 16;
     const point = { x: player.x + Math.cos(angle) * stop, y: player.y + Math.sin(angle) * stop };
@@ -276,8 +277,8 @@ export class Game {
       if (blocked(x, y, radius, this.obstacles) || Math.hypot(x - this.player.x, y - this.player.y) < 110) continue;
       if (this.drops.some(d => d.life > 0 && Math.hypot(x - d.x, y - d.y) < 72)) continue;
       if (this.enemies.some(e => e.hp > 0 && Math.hypot(x - e.x, y - e.y) < radius + e.r + 8)) continue;
-      const point = { x, y }, target = approachPoint(point, this.player, radius, this.obstacles);
-      if (clearLine(x, y, target.x, target.y, radius, this.obstacles)) return point;
+      const point = { x, y };
+      if (approachPoint(point, this.player, radius, this.obstacles)) return point;
     }
     return null;
   }
@@ -525,7 +526,7 @@ export class Game {
     const graph = navigationGraph(radius, this.obstacles), visited = new Set();
     const costs = graph.nodes.map(n => {
       const target = approachPoint(n, this.player, radius, this.obstacles);
-      return clearLine(n.x, n.y, target.x, target.y, radius, this.obstacles) ? Math.hypot(n.x - target.x, n.y - target.y) : Infinity;
+      return target ? Math.hypot(n.x - target.x, n.y - target.y) : Infinity;
     });
     for (let i = 0; i < graph.nodes.length; i++) {
       let current = -1;
@@ -581,7 +582,7 @@ export class Game {
       e.stagger = Math.max(0, (e.stagger || 0) - dt);
       e.hit = Math.max(0, e.hit - dt); e.phase += dt * e.speed / 12;
       let target = approachPoint(e, p, e.r, this.obstacles);
-      if (!clearLine(e.x, e.y, target.x, target.y, e.r, this.obstacles)) {
+      if (!target) {
         const paths = this.paths.get(e.r) || this.updatePaths(e.r);
         let best = Infinity;
         target = e;
@@ -606,11 +607,12 @@ export class Game {
     this.hazards = this.hazards.filter(h => h.life > 0);
     if (this.state === 'dead') return;
     for (const b of this.bullets) {
-      const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
+      const travel = Math.max(0, Math.min(dt, b.life));
+      const nx = b.x + b.vx * travel, ny = b.y + b.vy * travel;
       b.life -= dt;
       // Resolve the first collision along the trajectory, including walls.
       const steps = Math.ceil(Math.hypot(nx - b.x, ny - b.y) / 5);
-      for (let s = 1; s <= steps && b.life > 0; s++) {
+      for (let s = 1; s <= steps; s++) {
         const sx = b.x + (nx - b.x) * s / steps, sy = b.y + (ny - b.y) * s / steps;
         if (blocked(sx, sy, 1, this.obstacles)) { b.life = 0; this.burst(sx, sy, '#b8a676', 3); break; }
         let e;
@@ -626,6 +628,7 @@ export class Game {
             if (e.type !== 'boss') e.stagger = .45;
           }
           b.life = 0; this.damageEnemy(e, b.damage, sx, sy);
+          break;
         }
       }
       b.x = nx; b.y = ny;
