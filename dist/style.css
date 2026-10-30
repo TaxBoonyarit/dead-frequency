@@ -92,9 +92,8 @@ body:not(.game-active) .topbar{height:72px}
 .game-active .state-overlay{overflow-y:auto;align-items:safe center}
 #state-content:focus{outline:2px solid var(--accent);outline-offset:-4px}
 .upgrade-card .select-label{font:11px var(--thai);letter-spacing:0}
-#touch-tutorial,#quit-confirm{max-width:520px}#touch-tutorial h2,#quit-confirm h2{font:700 26px var(--thai);line-height:1.5}
-#touch-tutorial p,#quit-confirm p{font-size:14px;line-height:1.9;color:#c2cbb7}
-.drag-guide{display:block;width:100%;height:110px;fill:#263b30;stroke:#a4f1e0;stroke-width:2}.drag-guide path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+#quit-confirm{max-width:520px}#quit-confirm h2{font:700 26px var(--thai);line-height:1.5}
+#quit-confirm p{font-size:14px;line-height:1.9;color:#c2cbb7}
 @media(max-width:800px){body:not(.game-active) .sidebar{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){
   .intro{padding:12px 0}.intro h1{font-size:32px}.intro .eyebrow,.intro p{display:none}
@@ -121,7 +120,7 @@ button,summary{letter-spacing:0}
 .game-tools button[id]{font:500 var(--ui-small)/1.5 var(--thai);letter-spacing:0}
 .game-tools #fullscreen-button{font-size:20px}
 .character-picker legend,.menu-content .section-label,.manual-grid h3{font:600 var(--ui-size)/1.6 var(--thai)}
-.menu-content>p,.menu-content .difficulty-section p,.menu-content .start-controls,.menu-content .touch-hint,.state-copy,.armory-description,.armory-note,.weapon-card>p,.manual-grid p,#touch-tutorial p,#quit-confirm p{font:400 var(--ui-size)/1.7 var(--thai)}
+.menu-content>p,.menu-content .difficulty-section p,.menu-content .start-controls,.menu-content .touch-hint,.state-copy,.armory-description,.armory-note,.weapon-card>p,.manual-grid p,#quit-confirm p{font:400 var(--ui-size)/1.7 var(--thai)}
 .menu-content .menu-note,.weapon-sound-actions .sound-preview,.upgrade-card .select-label{font:400 var(--ui-small)/1.6 var(--thai);letter-spacing:0}
 .character-options small,.weapon-card dt,.hud-label,.threat-count{letter-spacing:0;font-variant-numeric:tabular-nums}
 .intro h1{font-size:clamp(24px,4vw,44px);line-height:1.2;letter-spacing:0}
@@ -429,3 +428,84 @@ body.game-active{overflow:hidden}
 }
 
 @media(max-width:360px){.upgrade-heading .state-title{font-size:20px}}
+
+/* A two-hand briefing, with the launch action always easy to find. */
+#touch-tutorial{width:min(580px,calc(100vw - 28px));max-height:calc(100dvh - 28px);padding:28px;border:1px solid #647653;background:radial-gradient(ellipse at top right,#30412d66,transparent 65%),#182018;box-shadow:0 24px 100px #0009;overflow-y:auto;overscroll-behavior:contain}
+.tutorial-eyebrow{display:flex;gap:10px;align-items:center;color:#b2c79b;font-size:11px;font-weight:500}
+.tutorial-eyebrow>span{color:#647653}
+#touch-tutorial h2{margin:8px 0 6px;font:700 clamp(23px,4vw,30px)/1.4 var(--thai);letter-spacing:-.4px}
+#touch-tutorial p{margin:0;font:400 13px/1.7 var(--thai);color:#b7c3ad}
+.tutorial-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;margin-top:22px}
+.tutorial-control{min-width:0;padding:14px 14px 16px;border:1px solid #52694e80;background:#101a1480}
+.tutorial-control-label{display:flex;justify-content:space-between;color:#a9baa2;font-size:11px}
+.tutorial-control-label>span:last-child{color:#718a72;font-variant-numeric:tabular-nums}
+.tutorial-diagram{display:block;width:100%;height:112px;fill:none;stroke:#a4edda;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tutorial-pad{fill:#253d33;stroke:#a4edda99}
+.tutorial-axis{stroke:#6d958177;stroke-width:1}
+.tutorial-thumb-origin{stroke:#a4edda44;stroke-dasharray:3 4}
+.tutorial-thumb{fill:#8fe4cc;stroke:#c2ffec}
+.tutorial-aim-dot{fill:#c2ffec;stroke:none}
+.tutorial-control h3{margin:4px 0 5px;font-size:16px;font-weight:600;color:#e0f0e5}
+#touch-tutorial .tutorial-control p{font-size:12px;line-height:1.7;color:#b1c2b4}
+#touch-tutorial .tutorial-aim-note{grid-column:1/-1;text-align:center;font-size:11px;color:#a4b29d;margin-top:10px}
+.tutorial-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;list-style:none;margin:20px 0 0;padding:16px 0;border-top:1px solid #45573c;border-bottom:1px solid #45573c}
+.tutorial-tools li{display:flex;gap:9px;align-items:center;min-width:0}
+.tutorial-tools li>span:last-child{display:grid;gap:1px}
+.tutorial-tool-icon{width:25px;height:25px;flex-shrink:0;text-align:center;font-size:25px;line-height:25px;color:#b6ca9e;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tutorial-tools strong{font-size:12px;font-weight:500;color:#e1e7d8}
+.tutorial-tools small{font-size:11px;color:#a8b69e}
+#touch-tutorial .tutorial-safe{display:flex;justify-content:center;align-items:center;gap:8px;margin:17px 0 14px;font-size:11px;color:#b9c9a8}
+.tutorial-safe>span{width:5px;height:5px;border-radius:50%;background:#b8d591;flex-shrink:0}
+.tutorial-actions .primary{display:flex;width:100%;min-width:0;min-height:52px;padding:12px 18px;font-size:14px}
+.tutorial-actions .secondary{width:100%;min-height:44px;border:0;margin:5px 0 0;color:#b5c0aa;font-size:12px}
+.tutorial-actions .secondary:hover{color:#eff2e8;background:#ffffff08}
+@media(max-width:420px){
+  #touch-tutorial{padding:22px 18px}
+  .tutorial-controls{gap:0 10px;margin-top:18px}
+  .tutorial-control{padding:12px 10px 14px}
+  .tutorial-diagram{height:98px}
+  .tutorial-control h3{font-size:15px}
+  #touch-tutorial .tutorial-control p{font-size:11px}
+  .tutorial-tools{gap:8px;margin-top:16px;padding:14px 0}
+  .tutorial-tools li{gap:6px}.tutorial-tool-icon{width:20px;height:24px;font-size:23px}
+}
+@media(max-height:520px) and (min-width:600px) and (orientation:landscape){
+  #touch-tutorial[open]{display:grid;grid-template-columns:1fr 1.15fr;gap:12px 24px;width:min(760px,calc(100vw - 28px));padding:20px 24px}
+  .tutorial-heading{grid-column:1;grid-row:1}
+  #touch-tutorial h2{font-size:23px;margin-top:6px}
+  #touch-tutorial .tutorial-heading p{font-size:12px}
+  .tutorial-controls{grid-column:2;grid-row:1/span 3;margin:0}
+  .tutorial-control{padding:10px}
+  .tutorial-diagram{height:90px}
+  .tutorial-control h3{font-size:14px}
+  #touch-tutorial .tutorial-control p{font-size:11px}
+  #touch-tutorial .tutorial-aim-note{margin-top:6px;font-size:10px}
+  .tutorial-tools{grid-column:1;grid-row:2;margin:0;padding:10px 0;gap:6px}
+  .tutorial-tools li{gap:5px}.tutorial-tool-icon{width:19px;height:22px;font-size:22px}
+  .tutorial-tools strong{font-size:11px}.tutorial-tools small{font-size:10px}
+  #touch-tutorial .tutorial-safe{grid-column:1;grid-row:3;margin:0;justify-content:flex-start;font-size:10px}
+  .tutorial-actions{grid-column:1/-1;display:flex;gap:12px;align-items:center;border-top:1px solid #45573c;padding-top:12px}
+  .tutorial-actions .primary{flex:1;min-height:46px;padding:10px 16px}
+  .tutorial-actions .secondary{width:auto;min-width:100px;margin:0;padding:8px}
+}
+@media(max-height:700px) and (orientation:portrait){
+  #touch-tutorial{padding:18px 16px}
+  .tutorial-eyebrow{font-size:10px}
+  #touch-tutorial h2{font-size:22px;margin:6px 0 4px}
+  #touch-tutorial .tutorial-heading p{font-size:12px}
+  .tutorial-controls{margin-top:14px}
+  .tutorial-control{padding:10px}
+  .tutorial-diagram{height:72px}
+  .tutorial-control h3{margin-top:2px;font-size:14px}
+  #touch-tutorial .tutorial-aim-note{margin-top:8px;font-size:10px}
+  .tutorial-tools{margin-top:12px;padding:12px 0}
+  #touch-tutorial .tutorial-safe{margin:12px 0 10px;font-size:10px}
+  .tutorial-actions .primary{min-height:48px;padding:10px 14px;font-size:13px}
+  .tutorial-actions .secondary{margin-top:2px}
+}
+@media(max-height:360px) and (min-width:600px) and (orientation:landscape){
+  #touch-tutorial[open]{gap:8px 20px;padding:14px 20px}
+  #touch-tutorial h2{font-size:21px}
+  .tutorial-diagram{height:72px}
+  .tutorial-actions{padding-top:8px}
+}
