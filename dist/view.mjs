@@ -22,10 +22,10 @@ export function touchAimPoint(x, y, angle, width, height, scale = 1) {
   return { x: x + dx * distance, y: y + dy * distance, distance };
 }
 
-export function drawTouchAim(c, { x, y, angle, width, height, scale, spread, active, reloading }) {
+export function drawTouchAim(c, { x, y, angle, width, height, scale, spread, active, targeted, reloading }) {
   const target = touchAimPoint(x, y, angle, width, height, scale);
   const radius = Math.max(10 * scale, Math.min(23 * scale, target.distance * Math.tan(spread / 2)));
-  const color = reloading ? '#f3bd80' : '#a4f1e0';
+  const color = reloading ? '#f3bd80' : targeted ? '#f4d58c' : '#a4f1e0';
   c.save(); c.globalAlpha = active ? 1 : .55;
   c.translate(x, y); c.rotate(angle);
   const gradient = c.createLinearGradient(0, 0, target.distance, 0);

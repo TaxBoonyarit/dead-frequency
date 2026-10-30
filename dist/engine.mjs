@@ -80,6 +80,7 @@ export const UPGRADES = [
   { id: 'reload', icon: '⟳', title: 'SLEIGHT OF HAND', th: 'รีโหลดอย่างชำนาญ', detail: 'ลดเวลารีโหลด 25%' },
 ];
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const BULLET_SPEED = 980;
 export function blocked(x, y, r = 13, obstacles = OBSTACLES) {
   if (x < r || x > W - r || y < r || y > H - r) return true;
   return obstacles.some(o => x + r > o.x && x - r < o.x + o.w && y + r > o.y && y - r < o.y + o.h);
@@ -162,6 +163,7 @@ export class Game {
     this.weaponBonuses = { damage: 1, rate: 1, reload: 1, mag: 0 };
     this.gun = { ...this.weaponStats('pistol'), ammo: 18, reserve: AMMO.start, cooldown: 0, reload: 0, bloom: 0 };
     this.knifeCooldown = 0; this.slash = null; this.autoReloadPending = false;
+    this.fireTarget = null;
     this.hazards = []; this.enemies = []; this.bullets = []; this.particles = []; this.drops = []; this.stains = [];
     this.remaining = 0; this.total = 0; this.spawnClock = 0; this.pathClock = 0;
     this.paths = new Map(); this.events = []; this.banner = 0; this.hitFlash = 0;
@@ -235,6 +237,7 @@ export class Game {
   }
   start() { this.reset(this.difficulty); this.sceneOrder = shuffleScenes(this.random); this.state = 'playing'; this.nextWave(); }
   nextWave() {
+    this.fireTarget = null;
     this.wave++; this.total = 7 + this.wave * 3; this.remaining = this.total;
     this.obstacles = randomObstacles(this.random, this.player);
     this.paths.clear(); this.pathClock = 0; this.drops = []; this.stains = [];
@@ -395,6 +398,24 @@ export class Game {
       : g.bloom * 2 + (p.moving ? .7 : 0) + (p.sprinting ? 1.4 : 0);
     return g.spread * (1 + penalty);
   }
+  aimTarget(visible = () => true) {
+    const p = this.player, dx = Math.cos(p.angle), dy = Math.sin(p.angle);
+    let target = null, nearest = this.gun.range * BULLET_SPEED;
+    for (const e of this.enemies) {
+      if (e.hp <= 0 || !visible(e)) continue;
+      const x = e.x - p.x, y = e.y - p.y, along = x * dx + y * dy;
+      const across = x * dy - y * dx, radius = e.r + 3;
+      if (across * across >= radius * radius) continue;
+      const half = Math.sqrt(radius * radius - across * across);
+      if (along + half < 0) continue;
+      const distance = Math.max(0, along - half);
+      // Check the near surface: an enemy can be partly exposed beside cover.
+      if (distance < nearest && clearLine(p.x, p.y, p.x + dx * distance, p.y + dy * distance, 1, this.obstacles)) {
+        target = e; nearest = distance;
+      }
+    }
+    return target;
+  }
   shoot() {
     const g = this.gun, p = this.player;
     if (this.state !== 'playing' || this.clearClock > 0 || this.melee.cooldown > 0) return;
@@ -409,7 +430,7 @@ export class Game {
       const spread = g.pellets === 1 ? (this.random() - .5) * cone : (i / (g.pellets - 1) - .5) * cone + (this.random() - .5) * .015;
       const angle = p.angle + spread;
       // Sweep from the survivor so even point-blank targets are hit.
-      this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * 980, vy: Math.sin(angle) * 980, life: g.range, damage: g.damage, knockback: this.weaponId === 'shotgun' ? 6 : 0 });
+      this.bullets.push({ x: p.x, y: p.y, vx: Math.cos(angle) * BULLET_SPEED, vy: Math.sin(angle) * BULLET_SPEED, life: g.range, damage: g.damage, knockback: this.weaponId === 'shotgun' ? 6 : 0 });
     }
     g.bloom = Math.min(1, g.bloom + .18);
     g.ammo--; g.cooldown = g.interval; this.emit('shot', { weapon: this.weaponId });
@@ -570,7 +591,8 @@ export class Game {
     if (this.autoReloadPending && this.melee.cooldown === 0) {
       this.reload(); this.autoReloadPending = false;
     }
-    if (input.fire) this.shoot();
+    this.fireTarget = input.autoFire && input.fire && !this.usingMelee ? this.aimTarget(input.targetVisible) : null;
+    if (input.fire && (!input.autoFire || this.usingMelee || this.fireTarget)) this.shoot();
     this.updateAirdrop(dt);
     this.spawnClock -= dt;
     if (this.remaining > 0 && this.spawnClock <= 0) { this.spawn(); this.spawnClock = Math.max(.23, 1.05 - this.wave * .065); if (this.remaining === 1 && !this.bossWarned) { this.bossWarned = true; this.spawnClock = 3; this.emit('bossIncoming'); } }

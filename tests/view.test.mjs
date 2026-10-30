@@ -1,7 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
 import { Game, KNIFE } from '../dist/engine.mjs';
-import { cameraOffset, pointerToWorld, knifePose } from '../dist/view.mjs';
+import { cameraOffset, pointerToWorld, knifePose, viewportSize } from '../dist/view.mjs';
+
+test('a temporarily collapsed viewport keeps the last valid canvas size and recovers on resize', () => {
+  const source = readFileSync(new URL('../dist/game.mjs', import.meta.url), 'utf8');
+  const context = { viewport: { clientWidth: 390, clientHeight: 756 }, canvas: {}, viewportSize, touchMode: true };
+  runInNewContext(`let viewWidth, viewHeight, cameraY; ${source.slice(source.indexOf('function resize()'), source.indexOf('new ResizeObserver'))}`, context);
+  runInNewContext(source.slice(source.indexOf('function render(now)'), source.indexOf('function resize()')), context);
+  context.resize(); const previous = { ...context.canvas };
+  for (const [width, height] of [[0, 756], [390, 0], [0, 0]]) {
+    Object.assign(context.viewport, { clientWidth: width, clientHeight: height }); context.resize();
+    assert.doesNotThrow(()=>context.render(0));
+    assert.deepEqual(context.canvas, previous);
+  }
+  Object.assign(context.viewport, { clientWidth: 844, clientHeight: 300 }); context.resize();
+  const next = viewportSize(844, 300, true);
+  assert.equal(context.canvas.width, next.width); assert.equal(context.canvas.height, next.height);
+});
 
 test('a stationary pointer stays under the reticle as the camera follows the player', () => {
   const bounds = { left: 13, top: 200, width: 364, height: 423 };

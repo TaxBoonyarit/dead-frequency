@@ -47,7 +47,7 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
   for (const [button, action] of [[fire, 'firing'], [sprint, 'sprinting']]) {
     button.addEventListener('pointerdown', e => {
       if (!canUse() || held.has(action) || e.button !== 0) return;
-      e.preventDefault(); held.set(action, e.pointerId); input[action] = true;
+      e.preventDefault(); held.set(action, e.pointerId); input[action] = action !== 'firing';
       if (action === 'firing') fireOrigin = { x: e.clientX, y: e.clientY };
       button.classList.add('held'); button.setPointerCapture(e.pointerId);
     });
@@ -64,9 +64,10 @@ export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
     if (held.get('firing') !== e.pointerId || !fireOrigin) return;
     e.preventDefault();
     const dx = e.clientX - fireOrigin.x, dy = e.clientY - fireOrigin.y, length = Math.hypot(dx, dy);
-    // Small finger shifts keep the last aim; they never gate or stop firing.
+    // Choose a direction before arming; small finger shifts keep the last aim.
     if (length < 8) return;
     input.aim = { x: dx / length, y: dy / length };
+    input.firing = true;
     const radius = Math.min(20, length);
     fire.style.setProperty('--aim-x', `${input.aim.x * radius}px`);
     fire.style.setProperty('--aim-y', `${input.aim.y * radius}px`);

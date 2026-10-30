@@ -183,6 +183,7 @@ function drawBody(e, isPlayer = false) {
 }
 const demo = [{x:431,y:230,angle:1.1},{x:800,y:160,angle:1.8},{x:891,y:448,angle:3.2},{x:384,y:616,angle:-.8},{x:1040,y:380,angle:3.1},{x:655,y:708,angle:-1.4}].map(e => ({...e,hp:65,maxHp:65,type:'walker',phase:0}));
 function render(now) {
+  if (!viewport.clientWidth || !viewport.clientHeight) return;
   const nextScene = sceneForWave(game.wave, game.sceneOrder);
   if (nextScene !== activeScene || activeObstacles !== game.obstacles) { activeScene = nextScene; activeObstacles = game.obstacles; paintGround(); $('scene-label').textContent = activeScene.name; }
   const p = game.player;
@@ -254,6 +255,11 @@ function render(now) {
     ctx.strokeStyle = '#d1e69a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 26, -Math.PI / 2, -Math.PI / 2 + (1 - game.gun.reload / game.gun.reloadTime) * Math.PI * 2); ctx.stroke();
   }
   for (const b of game.bullets) line(ctx, [[b.x - b.vx * .017, b.y - b.vy * .017], [b.x, b.y]], '#f5dfa2', 2);
+  const target = touchMode && touchInput.firing && game.fireTarget?.hp > 0 ? game.fireTarget : null;
+  if (target) {
+    ctx.save(); ctx.strokeStyle = '#f4d58c'; ctx.lineWidth = 2 * viewHeight / viewport.clientHeight;
+    ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.arc(target.x, target.y, target.r + 9, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  }
   for (const a of game.particles) { ctx.globalAlpha = Math.min(1, a.life * 4); circle(ctx, a.x, a.y, 2, a.color); } ctx.globalAlpha = 1;
   sceneWeather(ctx, activeScene, now, W, H);
   ctx.restore();
@@ -273,7 +279,7 @@ function render(now) {
   // Subtle surveillance scan lines.
   ctx.fillStyle = '#0000000a'; for (let y = 0; y < viewHeight; y += 4) ctx.fillRect(0, y, viewWidth, 1);
   if (touchMode && game.state === 'playing' && !game.usingMelee) {
-    drawTouchAim(ctx, { x: p.x - cameraX, y: p.y - cameraY, angle: p.angle, width: viewWidth, height: viewHeight, scale: viewHeight / viewport.clientHeight, spread: game.accuracySpread(), active: !!touchInput.aim, reloading: game.gun.reload > 0 });
+    drawTouchAim(ctx, { x: p.x - cameraX, y: p.y - cameraY, angle: p.angle, width: viewWidth, height: viewHeight, scale: viewHeight / viewport.clientHeight, spread: game.accuracySpread(), active: touchInput.firing, targeted: !!target, reloading: game.gun.reload > 0 });
   }
   if (pointer && game.state === 'playing' && !touchMode && !game.usingMelee) {
     const aim = pointerAim(p), x = aim.x - cameraX, y = aim.y - cameraY;
@@ -283,7 +289,8 @@ function render(now) {
   }
 }
 function resize() {
-  const size = viewportSize(viewport.clientWidth, Math.max(1, viewport.clientHeight), touchMode);
+  if (!viewport.clientWidth || !viewport.clientHeight) return;
+  const size = viewportSize(viewport.clientWidth, viewport.clientHeight, touchMode);
   viewWidth = size.width; viewHeight = size.height; cameraY = size.cameraY;
   canvas.width = viewWidth; canvas.height = viewHeight;
 }
@@ -305,6 +312,9 @@ function storeBest() {
 function timeText(seconds) { const t = Math.floor(seconds); return [Math.floor(t / 3600), Math.floor(t / 60) % 60, t % 60].map(n => String(n).padStart(2, '0')).join(':'); }
 function updateHUD() {
   const p = game.player, g = game.gun;
+  const shooting = game.state === 'playing' && touchInput.firing && game.fireTarget?.hp > 0 && g.reload === 0 && game.melee.cooldown === 0 && game.knifeCooldown === 0;
+  $('touch-fire').classList.toggle('auto-firing', !!shooting);
+  $('touch-fire').querySelector('.fire-label').textContent = game.usingMelee ? 'ลากเพื่อตี' : g.reload > 0 ? 'รีโหลด…' : shooting ? 'กำลังยิง' : touchInput.firing ? 'หาเป้าหมาย' : 'ลากเล็ง';
   $('health-meter').setAttribute('aria-valuenow', String(Math.ceil(p.hp))); $('health-meter').setAttribute('aria-valuemax', String(p.maxHp));
   $('shop-button').textContent = game.state === 'menu' ? 'ร้านอาวุธ' : `ร้าน · ${game.credits} CR`;
   $('health-label').textContent = Math.ceil(p.hp); $('health-bar').style.width = `${p.hp / p.maxHp * 100}%`; $('health-bar').style.background = p.hp < 30 ? '#d98d67' : '';
@@ -562,10 +572,14 @@ updateTouchMode();
 function touchAim(player) {
   return touchInput.aim ? { x: player.x + touchInput.aim.x * 1000, y: player.y + touchInput.aim.y * 1000 } : null;
 }
+function touchTargetVisible(enemy) {
+  const x = cameraOffset(game.player.x, viewWidth);
+  return enemy.x >= x && enemy.x <= x + viewWidth && enemy.y >= cameraY && enemy.y <= cameraY + viewHeight;
+}
 function frame(now) {
   const dt = Math.min((now - previous) / 1000, .05); previous = now;
   const movement = keyboardMovement(keys);
-  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim });
+  game.update(dt, { x: movement.x + touchInput.x, y: movement.y + touchInput.y, sprint: keys.has('shift') || touchInput.sprinting, fire: touchMode ? touchInput.firing : firing || keys.has(' '), aim: touchMode ? touchAim : pointerAim, autoFire: touchMode, targetVisible: touchTargetVisible });
   for (const e of game.events.splice(0)) {
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('boss-alert', e.type === 'bossIncoming' || e.type === 'boss');
     if (['wave', 'waveCleared', 'bossIncoming', 'boss'].includes(e.type)) $('wave-banner').classList.toggle('special-alert', e.type === 'boss' && !!e.special);

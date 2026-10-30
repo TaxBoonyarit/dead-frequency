@@ -30,7 +30,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง, F: ใช้อาวุธประชิด, E: เปิดกล่อง Airdrop เมื่ออยู่ใกล้
 - Esc / P: พักเกม
-- มือถือ: ลากวงกลมซ้ายเพื่อเดิน กดปุ่มยิงค้างเพื่อยิงทันที ขยับนิ้วขวาเพื่อเล็ง กดรีโหลดเพื่อเติมกระสุน และกดตีเพื่อใช้อาวุธประชิด
+- มือถือ: ลากวงกลมซ้ายเพื่อเดิน แตะปุ่มขวาแล้วลากเลือกทิศเล็ง ศัตรูบนจออยู่ในแนวและระยะปืนโดยไม่มีผนังบังจึงยิงอัตโนมัติ เล็งออกจากศัตรูหรือปล่อยนิ้วเพื่อหยุด กดรีโหลดเพื่อเติมกระสุน และกดตีเพื่อใช้อาวุธประชิด
 
 จบแต่ละระลอกจะได้รับโบนัสเข้ากระเป๋าทันที 100 + ระลอก × 10 CR เพียงครั้งเดียว (ด่าน 1 ได้ 110 CR ด่าน 2 ได้ 120 CR รวม 230 CR ซื้อ SMG 220 CR ได้หากยังไม่ใช้เงิน) และได้เลือกอัปเกรด 1 อย่าง เติมกระสุนสำรอง 18 นัด (สูงสุด 120 นัด) แล้วเติมแมกกาซีนจากกระสุนสำรอง และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
 
@@ -196,19 +196,23 @@ and restore accuracy.
 ## Touchscreen controls
 
 Touch-only devices enable on-screen controls automatically. Computers with a mouse, including touchscreen laptops, default to mouse and keyboard controls. Touching the interface enables touch mode; clicking the arena with a mouse switches back and fires in the same click. The “ปุ่มบนจอ” toolbar button toggles them on any
-device. The left stick only moves the survivor. Hold กดยิง to fire immediately
-in the last manually aimed direction; no drag is required to start shooting.
-Move the firing finger relative to its initial touch to change aim independently
-of movement. Movements under 8px retain the previous aim without stopping fire.
-Release the firing finger to stop shooting and retain aim for the next press.
-There is no automatic aiming or target locking. Hold วิ่ง to sprint and tap
-รีโหลด to reload. Each action tracks its own finger; releasing or cancelling it
-stops only that action. Pausing, switching modes and leaving the app clear held
-controls. The survivor's facing direction remains the fallback after a reset.
+device. The left stick only moves the survivor. Touch the right control and drag
+at least 8px to choose a direction before arming auto fire. Touching alone never
+fires, even if the previous aim points at an enemy. Once armed, small finger
+movements retain the last aim. The gun fires at its normal rate only when a living
+on-screen enemy intersects the manually aimed center line, within weapon range
+and without intervening cover. Aim away or release to stop; release never adds a
+shot. The gun does not turn towards or lock onto targets. Weapon spread still
+applies, so a valid target does not guarantee every bullet hits.
 
-The cyan mobile reticle and spread ring show the current manual shot direction
-and accuracy. The ring turns amber during reloads. Touch targets are at least
-48px, with layouts for portrait and landscape screens.
+The cyan reticle shows the manual aim direction. An amber ring marks the eligible
+enemy and the control reads “กำลังยิง” while firing is active. During reload the
+control reads “รีโหลด…”. When both magazines and reserve are empty, dragging the
+right control still uses the equipped melee; the separate ตี button also remains
+available. Hold วิ่ง to sprint and tap รีโหลด to reload. Each action tracks its
+own finger; releasing or cancelling it stops only that action. Pausing, switching
+modes and leaving the app clear held controls. Touch targets are at least 48px,
+with layouts for portrait and landscape screens.
 
 On phones the active arena spans the full screen width, with a compact header
 and no sidebar/footer below the match. Portrait framing fills the available screen and shows at least 620 world units horizontally. The scene scales uniformly and centers vertically, so controls have space without stretching sprites. Joystick,

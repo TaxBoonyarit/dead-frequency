@@ -67,12 +67,14 @@ test('simultaneous movement, manual aim, sprint and fire work in the engine', ()
   assert.ok(Math.abs(game.player.angle)<.01);assert.ok(game.bullets[0].vx>0);
 });
 
-test('holding fire shoots immediately and finger jitter never stops firing', async () => {
+test('touch down and initial jitter only aim; dragging arms until release', async () => {
   const {bindTouchControls}=await import('../dist/input.mjs');
   const stick=element(),knob=element(),fire=element(),sprint=element();
   const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
-  fire.send('pointerdown',2);assert.equal(input.firing,true);assert.equal(input.aim,null);
-  fire.send('pointermove',2,50,46);assert.equal(input.firing,true);assert.equal(input.aim,null);
+  fire.send('pointerdown',2);assert.equal(input.firing,false);assert.equal(input.aim,null);
+  fire.send('pointermove',2,50,46);assert.equal(input.firing,false);assert.equal(input.aim,null);
+  fire.send('pointermove',2,70,46);assert.equal(input.firing,true);assert.deepEqual(input.aim,{x:1,y:0});
+  fire.send('pointermove',2,50,46);assert.equal(input.firing,true);assert.deepEqual(input.aim,{x:1,y:0});
   fire.send('pointerup',3);assert.equal(input.firing,true);
   fire.send('pointerup',2);assert.equal(input.firing,false);
 });
@@ -83,7 +85,7 @@ test('right-finger aiming is independent of walking and never follows enemies', 
     const stick=element(),knob=element(),fire=element(),sprint=element();
     const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
     stick.send('pointerdown',1,46-dx,46-dy);assert.equal(input.aim,null);
-    fire.send('pointerdown',2,35,50);assert.equal(input.firing,true);
+    fire.send('pointerdown',2,35,50);assert.equal(input.firing,false);
     fire.send('pointermove',2,35+dx,50+dy);
     const direction={...input.aim};
     fire.send('pointermove',3,200,0);assert.deepEqual(input.aim,direction);
@@ -96,22 +98,22 @@ test('right-finger aiming is independent of walking and never follows enemies', 
     fire.send('pointermove',2,36,50);assert.deepEqual(input.aim,direction);assert.equal(input.firing,true);
     fire.send('pointerup',2);assert.deepEqual(input.aim,direction);assert.equal(input.firing,false);
     assert.equal(fire.style['--aim-x'],'0px');
-    fire.send('pointerdown',4,20,20);assert.equal(input.firing,true);assert.deepEqual(input.aim,direction);
+    fire.send('pointerdown',4,20,20);assert.equal(input.firing,false);assert.deepEqual(input.aim,direction);
     fire.send('pointermove',4,20,120);assert.deepEqual(input.aim,{x:0,y:1});
     fire.send('pointercancel',4);assert.equal(input.firing,false);assert.ok(Math.abs(input.x-dx/100)<1e-9);
     input.reset();fire.send('pointermove',4,200,20);assert.equal(input.aim,null);assert.equal(input.firing,false);
   }
 });
 
-test('firing before moving uses the current facing direction even with an enemy nearby', async () => {
+test('touch down never spends ammo or changes facing, even with an enemy nearby', async () => {
   const {bindTouchControls}=await import('../dist/input.mjs');
   const stick=element(),knob=element(),fire=element(),sprint=element();
   const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
   const g=new Game(()=>.5);g.start();g.obstacles=[];g.spawnClock=999;g.remaining=999;
   g.player.angle=Math.PI/2;
   g.enemies=[{x:g.player.x+150,y:g.player.y,hp:100,maxHp:100,type:'walker',r:14,speed:0,phase:0,hit:0}];
-  fire.send('pointerdown',2);g.update(.01,{fire:input.firing,aim:null});
-  assert.equal(g.gun.ammo,17);assert.ok(g.bullets[0].vy>0);assert.equal(g.player.angle,Math.PI/2);
+  fire.send('pointerdown',2);g.update(.01,{fire:input.firing,aim:null,autoFire:true});
+  assert.equal(g.gun.ammo,18);assert.equal(g.bullets.length,0);assert.equal(g.player.angle,Math.PI/2);
 });
 
 test('desktop and hybrid computers default to mouse controls; touch-only devices default to touch', () => {
@@ -122,4 +124,20 @@ test('desktop and hybrid computers default to mouse controls; touch-only devices
   assert.equal(initialTouchMode(hybrid),false);
   assert.equal(initialTouchMode(phone),true);
   assert.equal(initialTouchMode(()=>({matches:false})),false);
+});
+
+test('a touch gesture only spends ammo after aiming at a target and never on release or cancellation', async () => {
+  const {bindTouchControls}=await import('../dist/input.mjs');
+  for(const end of ['pointerup','pointercancel','lostpointercapture']) {
+    const stick=element(),knob=element(),fire=element(),sprint=element();
+    const input=bindTouchControls({stick,knob,fire,sprint,canUse:()=>true});
+    const g=new Game(()=>.5);g.start();g.obstacles=[];g.spawnClock=999;g.remaining=999;
+    g.enemies=[{x:800,y:410,hp:1000,maxHp:1000,type:'walker',r:14,speed:0,phase:0,hit:0}];
+    const update=()=>g.update(.05,{fire:input.firing,autoFire:true,aim:input.aim&&{x:g.player.x+input.aim.x*1000,y:g.player.y+input.aim.y*1000}});
+    fire.send('pointerdown',2);for(let i=0;i<10;i++)update();assert.equal(g.gun.ammo,18);
+    fire.send('pointermove',2,46,80);for(let i=0;i<10;i++)update();assert.equal(g.gun.ammo,18);
+    fire.send('pointermove',2,80,46);update();assert.equal(g.gun.ammo,17);
+    fire.send(end,2);for(let i=0;i<10;i++)update();assert.equal(g.gun.ammo,17);
+    fire.send('pointerdown',3);for(let i=0;i<10;i++)update();assert.equal(g.gun.ammo,17);
+  }
 });
