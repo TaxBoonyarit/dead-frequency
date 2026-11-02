@@ -3,7 +3,7 @@ import { bindChangelog } from './changelog.mjs';
 import { Game, W, H, OBSTACLES, WEAPONS, BOSSES, CHARACTERS, AMMO, KNIFE, MELEE_WEAPONS } from './engine.mjs';
 import { drawZombie, BOSS_PORTRAITS } from './zombie-art.mjs';
 import { SCENES, sceneForWave, sceneFloor, sceneStructures, sceneWeather } from './scenes.mjs';
-import { controlKey, keyboardMovement, bindTouchControls, initialTouchMode } from './input.mjs';
+import { controlKey, keyboardMovement, bindTouchControls, bindPauseButton, initialTouchMode } from './input.mjs';
 import { HorrorAudio, GUN_RECORDINGS, GUN_AUDIO, ZOMBIE_RECORDING, BOSS_RECORDING, PISTOL_RELOAD_RECORDING } from './audio.mjs';
 import { cameraOffset, pointerToWorld, drawTouchAim, viewportSize, meleePose, drawMelee, knifePose } from './view.mjs';
 const $ = id => document.getElementById(id);
@@ -11,6 +11,7 @@ const canvas = $('game'), ctx = canvas.getContext('2d'), viewport = $('viewport'
 const game = new Game();
 let touchMode = initialTouchMode(query => matchMedia(query));
 let touchInput;
+let resetPausePress;
 let touchTutorialSeen = false;
 const keys = new Set();
 let firing = false, pointer = null, viewWidth = W, viewHeight = H, cameraX = 0, cameraY = 0;
@@ -482,7 +483,10 @@ $('touch-tutorial-cancel').onclick = () => $('touch-tutorial').close();
 $('quit-cancel').onclick = () => $('quit-confirm').close();
 $('quit-confirm-done').onclick = () => { $('quit-confirm').close(); resetToMenu(); };
 $('start-button').onclick = startGame;
-$('pause-button').onclick = () => { game.pause(); renderState(); };
+resetPausePress = bindPauseButton($('pause-button'), { needsHold: () => touchMode, onPause: () => {
+  if (game.state !== 'playing') return;
+  game.pause(); renderState();
+} });
 $('sound-button').onclick = () => { soundEnabled = !soundEnabled; initAudio(); $('sound-button').textContent = soundEnabled ? 'เสียง: เปิด' : 'เสียง: ปิด'; $('sound-button').setAttribute('aria-pressed', String(soundEnabled)); $('sound-button').setAttribute('aria-label', soundEnabled ? 'ปิดเสียงเกม' : 'เปิดเสียงเกม'); tone(660, .12); if (game.state === 'playing') canvas.focus({ preventScroll: true }); };
 bindWakeLock($('wake-lock-button'), { document, navigator, notify: toast });
 function syncFullscreen() {
@@ -542,7 +546,7 @@ window.addEventListener('keydown', e => {
   keys.add(key);
 });
 window.addEventListener('keyup', e => keys.delete(controlKey(e)));
-function releaseInput() { keys.clear(); firing = false; touchInput?.reset(); }
+function releaseInput() { keys.clear(); firing = false; touchInput?.reset(); resetPausePress?.(); }
 window.addEventListener('blur', () => { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); if (game.state === 'playing') { game.pause(); renderState(); } });
 document.addEventListener('visibilitychange', () => { if (document.hidden && game.state === 'playing') { soundscape?.stopAmbience(); soundscape?.stopVoices(); releaseInput(); game.pause(); renderState(); } });
 function setPointer(e) { pointer = { clientX: e.clientX, clientY: e.clientY }; }
@@ -561,6 +565,8 @@ function updateTouchMode() {
   document.body.classList.toggle('touch-mode', touchMode);
   $('touch-mode-button').setAttribute('aria-pressed', String(touchMode));
   $('touch-mode-button').textContent = touchMode ? 'ปุ่มบนจอ: เปิด' : 'ปุ่มบนจอ: ปิด';
+  $('pause-button').textContent = touchMode ? 'กดค้างพัก' : 'พัก';
+  $('pause-button').title = touchMode ? 'กดค้าง 0.4 วินาที แล้วปล่อยเพื่อพักเกม' : 'หยุดเกมชั่วคราว';
   resize();
   canvas.style.cursor = game.state === 'playing' && !touchMode ? 'none' : '';
 }

@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { Game } from '../dist/engine.mjs';
 
 const source = readFileSync(new URL('../dist/game.mjs', import.meta.url), 'utf8');
-const menuActions = source.slice(source.indexOf('function startGame()'), source.indexOf("$('pause-button').onclick"));
+const menuActions = source.slice(source.indexOf('function startGame()'), source.indexOf('resetPausePress = bindPauseButton('));
 function setup(touchMode = false) {
   const game = new Game(), elements = new Map();
   const $ = id => {

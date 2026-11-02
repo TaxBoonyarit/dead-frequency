@@ -29,7 +29,7 @@ Workflow จะตรวจ syntax และรันเทสต์ก่อน
 - WASD / ปุ่มลูกศร: เดิน
 - เมาส์: เล็ง, คลิกซ้ายค้าง / Space: ยิง
 - R: รีโหลด, Shift: วิ่ง, F: ใช้อาวุธประชิด, E: เปิดกล่อง Airdrop เมื่ออยู่ใกล้
-- Esc / P: พักเกม
+- Esc / P: พักเกม · มือถือกดปุ่ม “กดค้างพัก” ค้างอย่างน้อย 0.4 วินาทีแล้วปล่อย แตะสั้นหรือลากนิ้วออกจะไม่พัก
 - มือถือ: ลากวงกลมซ้ายเพื่อเดิน แตะปุ่มขวาแล้วลากเลือกทิศเล็ง ศัตรูบนจออยู่ในแนวและระยะปืนโดยไม่มีผนังบังจึงยิงอัตโนมัติ เล็งออกจากศัตรูหรือปล่อยนิ้วเพื่อหยุด กดรีโหลดเพื่อเติมกระสุน และกดตีเพื่อใช้อาวุธประชิด
 
 จบแต่ละระลอกจะได้รับโบนัสเข้ากระเป๋าทันที 100 + ระลอก × 10 CR เพียงครั้งเดียว (ด่าน 1 ได้ 110 CR ด่าน 2 ได้ 120 CR รวม 230 CR ซื้อ SMG 220 CR ได้หากยังไม่ใช้เงิน) และได้เลือกอัปเกรด 1 อย่าง เติมกระสุนสำรอง 18 นัด (สูงสุด 120 นัด) แล้วเติมแมกกาซีนจากกระสุนสำรอง และฟื้นฟูเลือด 20 หน่วย ศัตรูมี 3 ชนิด: walker, runner และ brute เสบียงที่ตกอยู่บนพื้นจะหายไปหลัง 22 วินาที
@@ -212,7 +212,10 @@ right control still uses the equipped melee; the separate ตี button also rem
 available. Hold วิ่ง to sprint and tap รีโหลด to reload. Each action tracks its
 own finger; releasing or cancelling it stops only that action. Pausing, switching
 modes and leaving the app clear held controls. Touch targets are at least 48px,
-with layouts for portrait and landscape screens.
+with layouts for portrait and landscape screens. In touch mode, hold กดค้างพัก
+for at least 0.4 seconds and release inside the button to pause. A quick tap or
+drag cancels the pause gesture. The progress bar shows the hold duration; mouse
+clicks, keyboard activation and Esc/P still pause immediately.
 
 On phones the active arena spans the full screen width, with a compact header
 and no sidebar/footer below the match. Portrait framing fills the available screen and shows at least 620 world units horizontally. The scene scales uniformly and centers vertically, so controls have space without stretching sprites. Joystick,

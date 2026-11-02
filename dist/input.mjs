@@ -18,6 +18,34 @@ export function keyboardMovement(keys) {
   };
 }
 
+export function bindPauseButton(button, { needsHold, onPause }) {
+  let press = null;
+  function reset() { press = null; button.classList.remove('pause-holding'); }
+  button.addEventListener('pointerdown', e => {
+    if (!needsHold() || e.button !== 0 || press) return;
+    e.preventDefault();
+    press = { id: e.pointerId, start: e.timeStamp, x: e.clientX, y: e.clientY };
+    button.setPointerCapture(e.pointerId); button.classList.add('pause-holding');
+  });
+  button.addEventListener('pointermove', e => {
+    if (press?.id === e.pointerId && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 12) reset();
+  });
+  button.addEventListener('pointerup', e => {
+    if (press?.id !== e.pointerId) return;
+    const r = button.getBoundingClientRect();
+    const inside = e.clientX >= r.left && e.clientX <= r.left + r.width && e.clientY >= r.top && e.clientY <= r.top + r.height;
+    const deliberate = e.timeStamp - press.start >= 400 && Math.hypot(e.clientX - press.x, e.clientY - press.y) <= 12;
+    reset();
+    if (needsHold() && inside && deliberate) onPause();
+  });
+  for (const event of ['pointercancel', 'lostpointercapture']) button.addEventListener(event, e => {
+    if (press?.id === e.pointerId) reset();
+  });
+  button.addEventListener('click', e => { if (!needsHold() || e.detail === 0) onPause(); });
+  button.addEventListener('contextmenu', e => { if (needsHold()) e.preventDefault(); });
+  return reset;
+}
+
 export function bindTouchControls({ stick, knob, fire, sprint, canUse }) {
   let stickId = null, fireOrigin = null;
   const held = new Map();

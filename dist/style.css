@@ -511,3 +511,9 @@ body.game-active{overflow:hidden}
 }
 .touch-mode #touch-fire.held.auto-firing{color:#fff0bc;border-color:#f4d58c;background:#6a59274d;box-shadow:0 0 0 4px #f4d58c30}
 .touch-mode #touch-fire.held.auto-firing::before{border-color:#f4d58c99}
+
+#pause-button{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#pause-button::after{content:'';position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left}
+#pause-button.pause-holding{color:var(--accent);background:#52633b33}
+#pause-button.pause-holding::after{transform:scaleX(1);transition:transform .4s linear}
+@media(prefers-reduced-motion:reduce){#pause-button.pause-holding::after{transition:none}}
